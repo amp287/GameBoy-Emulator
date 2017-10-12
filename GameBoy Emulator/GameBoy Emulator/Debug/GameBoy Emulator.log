@@ -1,0 +1,5 @@
+﻿  main.c
+g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\main.c(4): warning C4013: 'malloc' undefined; assuming extern returning int
+g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\main.c(4): warning C4047: 'initializing': 'CPU *' differs in levels of indirection from 'int'
+  GameBoy Emulator.vcxproj -> G:\Code\GameBoy-Emulator\GameBoy Emulator\Debug\GameBoy Emulator.exe
+  GameBoy Emulator.vcxproj -> G:\Code\GameBoy-Emulator\GameBoy Emulator\Debug\GameBoy Emulator.pdb (Partial PDB)
