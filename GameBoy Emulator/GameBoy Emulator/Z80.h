@@ -53,3 +53,16 @@ typedef struct {
 void reset(CPU *cpu);
 int fetch(CPU *cpu);
 int execute(CPU *cpu);
+
+//Function Pointer
+typedef void (*OPCODE_OPERATION)(CPU* cpu, char r1[2]);
+
+typedef struct {
+	char *disassembly;
+
+	OPCODE_OPERATION execute;
+}INSTR;
+
+INSTR *Opcodes = {
+
+}

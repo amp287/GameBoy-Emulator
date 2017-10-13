@@ -24,3 +24,10 @@ void reset(CPU* cpu) {
 	cpu->de = 0;
 	cpu->hl = 0;
 }
+
+//Opcodes
+
+// 8-bit at Program counter to Register
+void LD_nn_n(CPU *cpu, unsigned short pc, unsigned char *n) {
+	*n = read_8_bit(cpu->pc);
+}
