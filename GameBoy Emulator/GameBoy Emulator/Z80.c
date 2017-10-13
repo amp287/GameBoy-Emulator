@@ -25,9 +25,18 @@ void reset(CPU* cpu) {
 	cpu->hl = 0;
 }
 
+
+
 //Opcodes
 
-// 8-bit at Program counter to Register
+//8 bit Loads
+
 void LD_nn_n(CPU *cpu, unsigned short *pc, unsigned short *n) {
 	*n = read_8_bit(cpu->pc);
+}
+
+
+//16-Bit Loads
+void LD_n_nn(CPU *cpu, int arg1, int arg2) {
+
 }
