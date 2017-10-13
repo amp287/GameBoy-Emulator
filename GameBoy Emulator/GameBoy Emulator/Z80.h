@@ -1,7 +1,10 @@
+#include <stdlib.h>
+
 #define ZERO_FLAG 0x80
 #define OPERATION_FLAG 0x40
 #define HALF_CARRY_FLAG 0x20
 #define CARRY_FLAG 0x10
+
 
 typedef struct {
 	// Program Counter
@@ -55,14 +58,17 @@ int fetch(CPU *cpu);
 int execute(CPU *cpu);
 
 //Function Pointer
-typedef void (*OPCODE_OPERATION)(CPU* cpu, char r1[2]);
+typedef void (*OPCODE_OPERATION)(CPU* cpu, unsigned short *r1, unsigned short *r2);
 
 typedef struct {
 	char *disassembly;
-
 	OPCODE_OPERATION execute;
+	char r1[2];
+	char r2[2];
 }INSTR;
 
-INSTR *Opcodes = {
-
-}
+const INSTR Opcodes[] = {
+	{"NOP", NULL, NULL, NULL},
+	{"LD BC,nn", NULL, "BC", },
+	{"LD "}
+};

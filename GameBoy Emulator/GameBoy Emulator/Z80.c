@@ -28,6 +28,6 @@ void reset(CPU* cpu) {
 //Opcodes
 
 // 8-bit at Program counter to Register
-void LD_nn_n(CPU *cpu, unsigned short pc, unsigned char *n) {
+void LD_nn_n(CPU *cpu, unsigned short *pc, unsigned short *n) {
 	*n = read_8_bit(cpu->pc);
 }

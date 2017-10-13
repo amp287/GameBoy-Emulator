@@ -1,5 +1,8 @@
 ﻿  main.c
-g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\main.c(4): warning C4013: 'malloc' undefined; assuming extern returning int
-g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\main.c(4): warning C4047: 'initializing': 'CPU *' differs in levels of indirection from 'int'
-  GameBoy Emulator.vcxproj -> G:\Code\GameBoy-Emulator\GameBoy Emulator\Debug\GameBoy Emulator.exe
-  GameBoy Emulator.vcxproj -> G:\Code\GameBoy-Emulator\GameBoy Emulator\Debug\GameBoy Emulator.pdb (Partial PDB)
+g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\z80.h(70): error C2078: too many initializers
+g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\z80.h(68): error C2078: too many initializers
+g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\z80.h(68): warning C4133: 'initializing': incompatible types - from 'char [4]' to 'const INSTR *'
+g:\code\gameboy-emulator\gameboy emulator\gameboy emulator\main.c(3): fatal error C1903: unable to recover from previous error(s); stopping compilation
+  INTERNAL COMPILER ERROR in 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Tools\MSVC\14.11.25503\bin\HostX86\x86\CL.exe'
+      Please choose the Technical Support command on the Visual C++
+      Help menu, or open the Technical Support help file for more information
