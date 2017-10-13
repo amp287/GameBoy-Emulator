@@ -67,6 +67,16 @@ typedef struct {
 	char r2[2];
 }INSTR;
 
+static INSTR OpcodesCD[] = {
+        {"RLC B", NULL, "B", NULL},         //CDx0
+        {"RLC C", NULL, "C", NULL},         //CDx1
+        {"RLC D", NULL, "D", NULL},         //CDx2
+        {"RLC E", NULL, "E", NULL},         //CDx3
+        {"RLC H", NULL, "H", NULL},         //CDx4
+        {"RLC HL", NULL, "HL", NULL},       //CDx5
+};
+
+
 static INSTR Opcodes[] = {
 	{"NOP", NULL, NULL, NULL},
 	{"LD BC,nn", NULL, "BC", NULL},
