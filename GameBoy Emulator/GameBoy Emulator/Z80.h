@@ -172,6 +172,108 @@ static INSTR Opcodes[] = {
 	{"LD H, L", NULL, "H", "L"},		//0x65
 	{"LD H, HL", NULL, "H", "HL"},		//0x66
 	{"LD H, A", NULL, "H", "A"},		//0x67
-	{"LD L, B", NULL, "L", "B" },		//0x68
-	{"LD L, C", NULL, "L", "C" },		//0x68
+	{"LD L, B", NULL, "L", "B"},		//0x68
+	{"LD L, C", NULL, "L", "C"},		//0x69
+	{"LD L, D", NULL, "L", "D"},		//0x6A
+	{"LD L, E", NULL, "L", "E"},		//0x6B
+	{"LD L, H", NULL, "L", "H"},		//0x6C
+	{"LD L, L", NULL, "L", "L"},		//0x6D
+	{"LD L, HL", NULL, "L", "HL"},		//0x6E
+	{"LD L, A", NULL, "L", "A"},		//0x6F
+	{"LD HL, B", NULL, "HL", "B"},		//0x70
+	{"LD HL, C", NULL, "HL", "C"},		//0x71
+	{"LD HL, D", NULL, "HL", "D"},		//0x72
+	{"LD HL, E", NULL, "HL", "E"},		//0x73
+	{"LD HL, H", NULL, "HL", "H"},		//0x74
+	{"LD HL, L", NULL, "HL", "L"},		//0x75
+	{"HALT", NULL, NULL, NULL},			//0x76
+	{"LD HL, A", NULL, "HL", "A"},		//0x77
+	{"LD A, B", NULL, "A", "B"},		//0x78
+	{"LD A, C", NULL, "A", "C"},		//0x79
+	{"LD A, D", NULL, "A", "D"},		//0x7A
+	{"LD A, E", NULL, "A", "E"},		//0x7B
+	{"LD A, H", NULL, "A", "H"},		//0x7C
+	{"LD A, L", NULL, "A", "L"},		//0x7D
+	{"LD A, HL", NULL, "A", "HL"},		//0x7E
+	{"LD A, A", NULL, "A", "A"},		//0x7F
+	{"ADD A, B", NULL, "A", "B"},		//0x80
+	{"ADD A, C", NULL, "A", "C"},		//0x81
+	{"ADD A, D", NULL, "A", "D"},		//0x82
+	{"ADD A, E", NULL, "A", "E"},		//0x83
+	{"ADD A, H", NULL, "A", "H"},		//0x84
+	{"ADD A, L", NULL, "A", "L" },		//0x85
+	{"ADD A, HL", NULL, "A", "HL"},		//0x86
+	{"ADD A, A", NULL, "A", "A"},		//0x87
+	{"ADC A, B", NULL, "A", "B"},		//0x88
+	{"ADC A, C", NULL, "A", "C"},		//0x89
+	{"ADC A, D", NULL, "A", "D"},		//0x8A
+	{"ADC A, E", NULL, "A", "E"},		//0x8B
+	{"ADC A, H", NULL, "A", "H"},		//0x8C
+	{"ADC A, L", NULL, "A", "L"},		//0x8D
+	{"ADC A, HL", NULL, "A", "HL"},		//0x8E
+	{"ADC A, A", NULL, "A", "A"},		//0x8F
+	{"SUB A, B", NULL, "A", "B"},		//0x90
+	{"SUB A, C", NULL, "A", "C"},		//0x91
+	{"SUB A, D", NULL, "A", "D"},		//0x92
+	{"SUB A, E", NULL, "A", "E"},		//0x93
+	{"SUB A, H", NULL, "A", "H"},		//0x94
+	{"SUB A, L", NULL, "A", "L"},		//0x95
+	{"SUB A, HL", NULL, "A", "HL"},		//0x96
+	{"SUB A, A", NULL, "A", "A"},		//0x97
+	{"SBC A, B", NULL, "A", "B"},		//0x98
+	{"SBC A, C", NULL, "A", "C"},		//0x99
+	{"SBC A, D", NULL, "A", "D"},		//0x9A
+	{"SBC A, E", NULL, "A", "E"},		//0x9B
+	{"SBC A, H", NULL, "A", "H"},		//0x9C
+	{"SBC A, L", NULL, "A", "L" },		//0x9D
+	{"SBC A, HL", NULL, "A", "HL"},		//0x9E
+	{"SBC A, A", NULL, "A", "A"},		//0x9F
+	{"AND B", NULL, "B", NULL},			//0xA0
+	{"AND C", NULL, "C", NULL},			//0xA1
+	{"AND D", NULL, "D", NULL},			//0xA2
+	{"AND E", NULL, "E", NULL},			//0xA3
+	{"AND H", NULL, "H", NULL},			//0xA4
+	{"AND L", NULL, "L", NULL},			//0xA5
+	{"AND HL", NULL, "HL", NULL},		//0xA6
+	{"AND A", NULL, "A", NULL},			//0xA7
+	{"XOR B", NULL, "B", NULL},			//0xA8
+	{"XOR C", NULL, "C", NULL},			//0xA9
+	{"XOR D", NULL, "D", NULL},			//0xAA
+	{"XOR E", NULL, "E", NULL},			//0xAB
+	{"XOR H", NULL, "H", NULL},			//0xAC
+	{"XOR L", NULL, "L", NULL },		//0xAD
+	{"XOR HL", NULL, "HL", NULL},		//0xAE
+	{"XOR A", NULL, "A", NULL},			//0xAF
+	{"OR B", NULL, "B", NULL},			//0xB0
+	{"OR C", NULL, "C", NULL},			//0xB1
+	{"OR D", NULL, "D", NULL},			//0xB2
+	{"OR E", NULL, "E", NULL},			//0xB3
+	{"OR H", NULL, "H", NULL},			//0xB4
+	{"OR L", NULL, "L", NULL},			//0xB5
+	{"OR HL", NULL, "HL", NULL},		//0xB6
+	{"OR A", NULL, "A", NULL},			//0xB7
+	{"CP B", NULL, "B", NULL},			//0xB8
+	{"CP C", NULL, "C", NULL},			//0xB9
+	{"CP D", NULL, "D", NULL},			//0xBA
+	{"CP E", NULL, "E", NULL},			//0xBB
+	{"CP H", NULL, "H", NULL},			//0xBC
+	{"CP L", NULL, "L", NULL},			//0xBD
+	{"CP HL", NULL, "HL", NULL},		//0xBE
+	{"CP A", NULL, "A", NULL},			//0xBF
+	{"RET NZ", NULL, "NZ", NULL},		//0xC0		//NZ means check for not zero
+	{"POP BC", NULL, "BC", NULL},		//0xC1
+	{"JP NZ, nn", NULL, "NZ", NULL},	//0xC2
+	{"JP nn", NULL, NULL, NULL },		//0xC3
+	{"CALL NZ, nn", NULL, "NZ", NULL},	//0xC4
+	{"PUSH BC", NULL, "BC", NULL},		//0xC5
+	{"ADD A, n", NULL, "A", NULL},		//0xC6
+	{"RST 0", NULL, NULL, NULL},		//0xC7
+	{"RET Z", NULL, "Z", NULL },		//0xC8
+	{"RET", NULL, NULL, NULL },			//0xC9
+	{"JP Z, nn", NULL, "Z", NULL},		//0xCA
+	{"Ext Ops (CB)", NULL, NULL, NULL},	//0xCB
+	{"CALL Z, nn", NULL, "Z", NULL},	//0xCC
+	{"CALL nn", NULL, NULL, NULL},		//0xCD
+	{"ADC A, n", NULL, "A", NULL},		//0xCE
+	{"RST 8", NULL, NULL, NULL},		//0xCF
 };
