@@ -67,8 +67,8 @@ typedef struct {
 	char r2[2];
 }INSTR;
 
-const INSTR Opcodes[] = {
+static INSTR Opcodes[] = {
 	{"NOP", NULL, NULL, NULL},
-	{"LD BC,nn", NULL, "BC", },
+	{"LD BC,nn", NULL, "BC", NULL},
 	{"LD "}
 };
