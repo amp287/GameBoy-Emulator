@@ -69,22 +69,22 @@ typedef struct {
 }INSTR;
 
 static INSTR OpcodesCD[] = {
-        {"RLC B", NULL, B, NULL},         //CDx00
-        {"RLC C", NULL, C, NULL},         //CDx01
-        {"RLC D", NULL, D, NULL},         //CDx02
-        {"RLC E", NULL, E, NULL},         //CDx03
-        {"RLC H", NULL, H, NULL},         //CDx04
-        {"RLC L", NULL, L, NULL},         //CDx05
-        {"RLC HL", NULL, HL, NULL},       //CDx06
-        {"RLC A", NULL, A, NULL},         //CDx07
-        {"RRC B", NULL, B, NULL},         //CDx08
-        {"RRC C", NULL, C, NULL},         //CDx09
-        {"RRC D", NULL, D, NULL},         //CDx0A
-        {"RRC E", NULL, E, NULL},         //CDx0B
-        {"RRC H", NULL, H, NULL},         //CDx0C
-        {"RRC L", NULL, L, NULL},         //CDx0D
-        {"RRC HL", NULL, HL, NULL},       //CDx0E
-        {"RRC A", NULL, A, NULL},         //CDx0F
+        {"RLC B", NULL, B, NULL},           //CDx00
+        {"RLC C", NULL, C, NULL},           //CDx01
+        {"RLC D", NULL, D, NULL},           //CDx02
+        {"RLC E", NULL, E, NULL},           //CDx03
+        {"RLC H", NULL, H, NULL},           //CDx04
+        {"RLC L", NULL, L, NULL},           //CDx05
+        {"RLC HL", NULL, HL, NULL},         //CDx06
+        {"RLC A", NULL, A, NULL},           //CDx07
+        {"RRC B", NULL, B, NULL},           //CDx08
+        {"RRC C", NULL, C, NULL},           //CDx09
+        {"RRC D", NULL, D, NULL},           //CDx0A
+        {"RRC E", NULL, E, NULL},           //CDx0B
+        {"RRC H", NULL, H, NULL},           //CDx0C
+        {"RRC L", NULL, L, NULL},           //CDx0D
+        {"RRC HL", NULL, HL, NULL},         //CDx0E
+        {"RRC A", NULL, A, NULL},           //CDx0F
 
         {"RL B", NULL, B, NULL},            //CDx10
         {"RL C", NULL, C, NULL},            //CDx11
@@ -239,13 +239,107 @@ static INSTR OpcodesCD[] = {
         {"RES 3 HL", NULL, 3, HL},          //CDx9E
         {"RES 3 A", NULL, 3, A},            //CDx9F
 
-        
+		{"RES 4 B", NULL, 4, B},			//CDxA0
+		{"RES 4 C", NULL, 4, C},			//CDxA1
+		{"RES 4 D", NULL, 4, D},			//CDxA2
+		{"RES 4 E", NULL, 4, E},			//CDxA3
+		{"RES 4 H", NULL, 4, H},			//CDxA4
+		{"RES 4 L", NULL, 4, L},			//CDxA5
+		{"RES 4 HL", NULL, 4, HL},			//CDxA6
+		{"RES 4 A", NULL, 4, A},			//CDxA7
+		{"RES 5 B", NULL, 5, B},			//CDxA8
+		{"RES 5 C", NULL, 5, C},			//CDxA9
+		{"RES 5 D", NULL, 5, D},			//CDxAA
+		{"RES 5 E", NULL, 5, E},			//CDxAB
+		{"RES 5 H", NULL, 5, H},			//CDxAC
+		{"RES 5 L", NULL, 5, L},			//CDxAD
+		{"RES 5 HL", NULL, 5, HL},			//CDxAE
+		{"RES 5 A", NULL, 5, A},			//CDxAF
 
+		{"RES 6 B", NULL, 6, B},			//CDxB0
+		{"RES 6 C", NULL, 6, C},			//CDxB1
+		{"RES 6 D", NULL, 6, D},			//CDxB2
+		{"RES 6 E", NULL, 6, E},			//CDxB3
+		{"RES 6 H", NULL, 6, H},			//CDxB4
+		{"RES 6 L", NULL, 6, L},			//CDxB5
+		{"RES 6 HL", NULL, 6, HL},			//CDxB6
+		{"RES 6 A", NULL, 6, A},			//CDxB7
+		{"RES 7 B", NULL, 7, B},			//CDxB8
+		{"RES 7 C", NULL, 7, C},			//CDxB9
+		{"RES 7 D", NULL, 7, D},			//CDxBA
+		{"RES 7 E", NULL, 7, E},			//CDxBB
+		{"RES 7 H", NULL, 7, H},			//CDxBC
+		{"RES 7 L", NULL, 7, L},			//CDxBD
+		{"RES 7 HL", NULL, 7, HL},			//CDxBE
+		{"RES 7 A", NULL, 7, A},			//CDxBF
 
+		{"SET 0 B", NULL, 0, B},			//CDxC0
+		{"SET 0 C", NULL, 0, C},			//CDxC1
+		{"SET 0 D", NULL, 0, D},			//CDxC2
+		{"SET 0 E", NULL, 0, E},			//CDxC3
+		{"SET 0 H", NULL, 0, H},			//CDxC4
+		{"SET 0 L", NULL, 0, L},			//CDxC5
+		{"SET 0 HL", NULL, 0, HL},			//CDxC6
+		{"SET 0 A", NULL, 0, A},			//CDxC7
+		{"SET 1 B", NULL, 1, B},			//CDxC8
+		{"SET 1 C", NULL, 1, C},			//CDxC9
+		{"SET 1 D", NULL, 1, D},			//CDxCA
+		{"SET 1 E", NULL, 1, E},			//CDxCB
+		{"SET 1 H", NULL, 1, H},			//CDxCC
+		{"SET 1 L", NULL, 1, L},			//CDxCD
+		{"SET 1 HL", NULL, 1, HL},			//CDxCE
+		{"SET 1 A", NULL, 1, A},			//CDxCF
 
+        {"SET 2 B", NULL, 2, B},            //CDxD0
+        {"SET 2 C", NULL, 2, C},            //CDxD1
+        {"SET 2 D", NULL, 2, D},            //CDxD2
+        {"SET 2 E", NULL, 2, E},            //CDxD3
+        {"SET 2 H", NULL, 2, H},            //CDxD4
+        {"SET 2 L", NULL, 2, L},            //CDxD5
+        {"SET 2 HL", NULL, 2, HL},          //CDxD6
+        {"SET 2 A", NULL, 2, A},            //CDxD7
+        {"SET 3 B", NULL, 3, B},            //CDxD8
+        {"SET 3 C", NULL, 3, C},            //CDxD9
+        {"SET 3 D", NULL, 3, D},            //CDxDA
+        {"SET 3 E", NULL, 3, E},            //CDxDB
+        {"SET 3 H", NULL, 3, H},            //CDxDC
+        {"SET 3 L", NULL, 3, L},            //CDxDD
+        {"SET 3 HL", NULL, 3, HL},          //CDxDE
+        {"SET 3 A", NULL, 3, A},            //CDxDF
 
+        {"SET 4 B", NULL, 4, B},            //CDxE0
+        {"SET 4 C", NULL, 4, C},            //CDxE1
+        {"SET 4 D", NULL, 4, D},            //CDxE2
+        {"SET 4 E", NULL, 4, E},            //CDxE3
+        {"SET 4 H", NULL, 4, H},            //CDxE4
+        {"SET 4 L", NULL, 4, L},            //CDxE5
+        {"SET 4 HL", NULL, 4, HL},          //CDxE6
+        {"SET 4 A", NULL, 4, A},            //CDxE7
+        {"SET 5 B", NULL, 5, B},            //CDxE8
+        {"SET 5 C", NULL, 5, C},            //CDxE9
+        {"SET 5 D", NULL, 5, D},            //CDxEA
+        {"SET 5 E", NULL, 5, E},            //CDxEB
+        {"SET 5 H", NULL, 5, H},            //CDxEC
+        {"SET 5 L", NULL, 5, L},            //CDxED
+        {"SET 5 HL", NULL, 5, HL},          //CDxEE
+        {"SET 5 A", NULL, 5, A},            //CDxEF
 
-
+        {"SET 6 B", NULL, 6, B},            //CDxF0
+        {"SET 6 C", NULL, 6, C},            //CDxF1
+        {"SET 6 D", NULL, 6, D},            //CDxF2
+        {"SET 6 E", NULL, 6, E},            //CDxF3
+        {"SET 6 H", NULL, 6, H},            //CDxF4
+        {"SET 6 L", NULL, 6, L},            //CDxF5
+        {"SET 6 HL", NULL, 6, HL},          //CDxF6
+        {"SET 6 A", NULL, 6, A},            //CDxF7
+        {"SET 7 B", NULL, 7, B},            //CDxF8
+        {"SET 7 C", NULL, 7, C},            //CDxF9
+        {"SET 7 D", NULL, 7, D},            //CDxFA
+        {"SET 7 E", NULL, 7, E},            //CDxFB
+        {"SET 7 H", NULL, 7, H},            //CDxFC
+        {"SET 7 L", NULL, 7, L},            //CDxFD
+        {"SET 7 HL", NULL, 7, HL},          //CDxFE
+        {"SET 7 A", NULL, 7, A},            //CDxFF
 };
 
 
