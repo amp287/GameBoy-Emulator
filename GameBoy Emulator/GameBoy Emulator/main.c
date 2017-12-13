@@ -1,7 +1,10 @@
 #include "Z80.h"
 
 int main() {
-	CPU *cpu = malloc(sizeof(CPU));
-
+	cpu_init();
+	cpu_fetch();
+	cpu_execute();
+	printf("Press a character and then enter to quit.\n");
+	getchar();
 	return 0;
 }

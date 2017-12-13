@@ -1,11 +1,12 @@
 #include <stdlib.h>
 
 #define ZERO_FLAG 0x80
-#define OPERATION_FLAG 0x40
+#define SUBTRACT_FLAG 0x40
 #define HALF_CARRY_FLAG 0x20
 #define CARRY_FLAG 0x10
 
-enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, C, NC, NZ, SP};
+//cf is carry flag
+enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP};
 
 typedef struct {
 	// Program Counter
@@ -18,6 +19,8 @@ typedef struct {
 
 	// Last instruction time 
 	long m, t;
+
+	unsigned char flags;
 	
 	// Registers
 	union {
@@ -54,27 +57,38 @@ typedef struct {
 
 }CPU;
 
-void reset(CPU *cpu);
-int fetch(CPU *cpu);
-int execute(CPU *cpu);
+void cpu_init();
+void cpu_reset();
+int cpu_fetch();
+int cpu_execute();
 
 //Function Pointer
-typedef void (*OPCODE_OPERATION)(CPU* cpu, int arg1, int arg2);
+typedef void (*OPCODE_OPERATION)(int arg1, int arg2);
 
 typedef struct {
 	char *disassembly;
 	OPCODE_OPERATION execute;
-	int r1;
-	int r2;
+	void *r1;
+	void *r2;
 }INSTR;
 
 //8-Bit Loads
-
-void LD_nn_n(CPU *cpu, int arg1, int arg2);
-void LD_r1_r2(CPU *cpu, int arg1, int arg2);
+void LD_nn_n(int arg1, int arg2);
+void LD_r1_r2(int arg1, int arg2);
+void LD_A_n(int arg1, int arg2);
+void LD_n_A(int arg1, int arg2);
+void LD_A_C(int arg1, int arg2);
+void LD_C_A(int arg1, int arg2);
+void LDD_A_HL(int arg1, int arg2);
+void LDD_HL_A(int arg1, int arg2);
+void LDI_A_HL(int arg1, int arg2);
+void LDI_HL_A(int arg1, int arg2);
+void LDH_n_A(int arg1, int arg2);
+void LDH_A_n(int arg1, int arg2);
+void LDI_A_HL(int arg1, int arg2);
 
 //16-Bit Loads
-void LD_n_nn(CPU *cpu, int arg1, int arg2);
+void LD_n_nn(int arg1, int arg2);
 
 static INSTR Opcodes[] = {
 	{"NOP", NULL, NULL, NULL},			//0x00
