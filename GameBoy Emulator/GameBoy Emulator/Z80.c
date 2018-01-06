@@ -56,11 +56,11 @@ void cpu_reset() {
 void clear_flag(unsigned char flag) {
 	unsigned char comp = ~flag;
 	comp = comp & 0xF0;
-	cpu->flags = cpu->flags & comp;
+	cpu->f = cpu->f & comp;
 }
 
 void set_flag(unsigned char flag) {
-	cpu->flags = cpu->flags | flag;
+	cpu->f = cpu->f | flag;
 }
 
 //Opcodes
@@ -254,7 +254,7 @@ void ADC_A_n(unsigned short a, unsigned short n) {
 	else
 		n = *reg_pointers[n];
 
-	n += cpu->flags & CARRY_FLAG ? 1 : 0;
+	n += cpu->f & CARRY_FLAG ? 1 : 0;
 
 	unsigned int result = cpu->a + n;
 
@@ -309,7 +309,7 @@ void SBC_A_n(unsigned short a, unsigned short n) {
 	else
 		n = *reg_pointers[n];
 
-	n += cpu->flags & CARRY_FLAG ? 1 : 0;
+	n += cpu->f & CARRY_FLAG ? 1 : 0;
 
 	set_flag(SUBTRACT_FLAG);
 
@@ -337,11 +337,9 @@ void AND_n(unsigned short n, unsigned short NA) {
 	else
 		n = *reg_pointers[n];
 
-	clear_flag(SUBTRACT_FLAG);
+	clear_flag(SUBTRACT_FLAG | CARRY_FLAG);
 
 	set_flag(HALF_CARRY_FLAG);
-
-	clear_flag(CARRY_FLAG);
 
 	cpu->a &= n;
 
@@ -357,11 +355,7 @@ void OR_n(unsigned short n, unsigned short NA) {
 	else
 		n = *reg_pointers[n];
 
-	clear_flag(SUBTRACT_FLAG);
-
-	clear_flag(HALF_CARRY_FLAG);
-
-	clear_flag(CARRY_FLAG);
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG | CARRY_FLAG);
 
 	cpu->a |= n;
 
@@ -377,11 +371,7 @@ void XOR_n(unsigned short n, unsigned short NA) {
 	else
 		n = *reg_pointers[n];
 
-	clear_flag(SUBTRACT_FLAG);
-
-	clear_flag(HALF_CARRY_FLAG);
-
-	clear_flag(CARRY_FLAG);
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG | CARRY_FLAG);
 
 	cpu->a ^= n;
 
@@ -471,4 +461,402 @@ void DEC_n(unsigned short n, unsigned short NA) {
 		write_8_bit(cpu->hl, val);
 	else
 		*reg_pointers[n] = val;
+}
+
+//16-Bit Arithmetic
+void ADD_HL_n(unsigned short HL, unsigned short n) {
+		n = *reg_pointers[n];
+
+		clear_flag(SUBTRACT_FLAG);
+
+		unsigned long res = cpu->hl + n;
+
+		if (res & 0xFFFF0000)
+			set_flag(CARRY_FLAG);
+		else
+			clear_flag(CARRY_FLAG);
+
+		cpu->hl = (unsigned short)res;
+
+		if (((cpu->hl & 0x0F) + (n & 0x0F)) > 0x0F)
+			set_flag(HALF_CARRY_FLAG);
+		else
+			clear_flag(HALF_CARRY_FLAG);
+}
+
+void ADD_SP_n(unsigned short sp, unsigned short n) {
+	clear_flag(SUBTRACT_FLAG | ZERO_FLAG);
+
+	unsigned long res = cpu->sp + n;
+
+	if (res & 0xFFFF0000)
+		set_flag(CARRY_FLAG);
+	else
+		clear_flag(CARRY_FLAG);
+
+	cpu->sp = (unsigned short)res;
+
+	if (((cpu->sp & 0x0F) + (n & 0x0F)) > 0x0F)
+		set_flag(HALF_CARRY_FLAG);
+	else
+		clear_flag(HALF_CARRY_FLAG);
+}
+
+void INC_nn(unsigned short nn, unsigned short NA) {
+	*reg_pointers[nn]++;
+}
+
+void DEC_nn(unsigned short nn, unsigned short NA) {
+	*reg_pointers[nn]--;
+}
+
+//Miscellaneous
+void SWAP_n(unsigned short n, unsigned short NA) {
+	unsigned char upper, lower;
+
+	upper = 0xF0 & *reg_pointers[n];
+	lower = 0x0F & *reg_pointers[n];
+
+	*reg_pointers[n] = lower << 4;
+	*reg_pointers[n] &= upper >> 4;
+
+	if (*reg_pointers[n])
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG | CARRY_FLAG);
+}
+
+void DAA(unsigned short NA_1, unsigned short NA_2) {
+	unsigned short s = cpu->a;
+
+	if (cpu->f & SUBTRACT_FLAG) {
+		if (cpu->f & HALF_CARRY_FLAG) s = (s - 0x06) & 0xFF;
+		if (cpu->f & CARRY_FLAG) s -= 0x60;
+	}
+	else {
+		if ((cpu->f & HALF_CARRY_FLAG) || (s & 0xF) > 9) s += 0x06;
+		if ((cpu->f & CARRY_FLAG) || s > 0x9F) s += 0x60;
+	}
+
+	cpu->a = s;
+	clear_flag(HALF_CARRY_FLAG);
+
+	if (cpu->a) clear_flag(ZERO_FLAG);
+	else set_flag(ZERO_FLAG);
+
+	if (s >= 0x100) set_flag(CARRY_FLAG);
+}
+
+void CPL(unsigned short NA_1, unsigned short NA_2) {
+	cpu->a = ~cpu->a;
+
+	set_flag(HALF_CARRY_FLAG | SUBTRACT_FLAG);
+}
+
+void CCF(unsigned short NA_1, unsigned short NA_2) {
+	if (cpu->f & CARRY_FLAG)
+		clear_flag(CARRY_FLAG);
+	else
+		set_flag(CARRY_FLAG);
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+void SCF(unsigned short NA_1, unsigned short NA_2) {
+	set_flag(CARRY_FLAG);
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+void NOP(unsigned short NA_1, unsigned short NA_2) {
+
+}
+
+//Power down (Stop) CPU until interrupt occurs
+//TODO: Set up interrupts and fill in this opcode
+void HALT(unsigned short NA_1, unsigned short NA_2) {
+
+}
+
+//Halt CPU & LCD display until button pressed
+//TODO: Set up interrupts and fill in this opcode
+void STOP(unsigned short NA_1, unsigned short NA_2) {
+
+}
+
+//This instruction disables interrupts but not
+//immediately.Interrupts are disabled after
+//instruction after DI is executed.
+//TODO: This
+void DI(unsigned short NA_1, unsigned short NA_2) {
+
+}
+
+//Enable interrupts. This intruction enables interrupts
+//but not immediately.Interrupts are enabled after
+//instruction after EI is executed.
+//TODO: This
+void EI(unsigned short NA_1, unsigned short NA_2) {
+
+}
+
+//Rotates & Shifts
+
+//This may be wrong (different than Cinoop but should be right according to GBCPUman doc)
+void RLCA(unsigned short A, unsigned short NA) {
+	unsigned char carry = (cpu->a & 0x80) >> 7;
+	if (carry) {
+		set_flag(CARRY_FLAG);
+	} else {
+		clear_flag(CARRY_FLAG);
+		set_flag(ZERO_FLAG);
+	}
+	cpu->a <<= 1;
+	cpu->a += carry;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+//Followed Cinoop implementation for following rotations and shifts
+void RLA(unsigned short A, unsigned short NA) {
+	int carry = cpu->f & CARRY_FLAG ? 1 : 0;
+
+	if (cpu->a & 0x80) set_flag(CARRY_FLAG);
+	else clear_flag(CARRY_FLAG);
+
+	cpu->a <<= 1;
+	cpu->a += carry;
+
+	clear_flag(SUBTRACT_FLAG | ZERO_FLAG | HALF_CARRY_FLAG);
+}
+
+void RRCA(unsigned short A, unsigned short NA) {
+	unsigned char carry = cpu->a & 0x01;
+	if (carry) set_flag(CARRY_FLAG);
+	else clear_flag(CARRY_FLAG);
+
+	cpu->a >>= 1;
+	if (carry) cpu->a |= ZERO_FLAG;
+
+	FLAGS_CLEAR(SUBTRACT_FLAG | ZERO_FLAG | HALF_CARRY_FLAG);
+}
+
+void RRA(unsigned short A, unsigned short NA) {
+	int carry = (cpu->f & CARRY_FLAG ? 1 : 0) << 7;
+
+	if (cpu->a & 0x01) set_flag(CARRY_FLAG);
+	else clear_flag(CARRY_FLAG);
+
+	cpu->a >>= 1;
+	cpu->a += carry;
+
+	clear_flag(SUBTRACT_FLAG | ZERO_FLAG | HALF_CARRY_FLAG);
+}
+
+void RLC_n(unsigned short n, unsigned short NA) {
+	unsigned char num;
+	unsigned char carry;
+
+	if(n == HL)
+		num = read_8_bit(cpu->hl);
+	else
+		num = *reg_pointers[n];
+
+	carry = (num & 0x80) >> 7;
+	
+	if (num & 0x80)
+		set_flag(CARRY_FLAG);
+	else
+		clear_flag(CARRY_FLAG);
+
+	num << 1;
+	num += carry;
+
+	if (num)
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	if (n == HL)
+		write_8_bit(cpu->hl, num);
+	else
+		*reg_pointers[n] = num;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+void RL_n(unsigned short n, unsigned short NA) {
+	unsigned char num;
+	unsigned char carry;
+
+	if (n == HL)
+		num = read_8_bit(cpu->hl);
+	else
+		num = *reg_pointers[n];
+
+	carry = cpu->f & CARRY_FLAG ? 1 : 0;
+
+	if (num & 0x80)
+		set_flag(CARRY_FLAG);
+	else
+		clear_flag(CARRY_FLAG);
+
+	num <<= 1;
+	num += carry;
+
+	if (num)
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+
+	if (n == HL)
+		write_8_bit(cpu->hl, num);
+	else
+		*reg_pointers[n] = num;
+}
+
+void RRC_n(unsigned short n, unsigned short NA) {
+	unsigned char num;
+	unsigned char carry;
+
+	if (n == HL)
+		num = read_8_bit(cpu->hl);
+	else
+		num = *reg_pointers[n];
+
+	carry = num & 0x01;
+	num >>= 1;
+
+	if (carry) {
+		set_flag(CARRY_FLAG);
+		num |= 0x80;
+	} else {
+		clear_flag(CARRY_FLAG);
+	}
+
+	if (num)
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	if (n == HL)
+		write_8_bit(cpu->hl, num);
+	else
+		*reg_pointers[n] = num;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+void RR_n(unsigned short n, unsigned short NA) {
+	unsigned char num;
+
+	if (n == HL)
+		num = read_8_bit(cpu->hl);
+	else
+		num = *reg_pointers[n];
+
+	num >>= 1;
+
+	if (cpu->f & CARRY_FLAG)
+		num |= 0x80;
+
+	if (num & 0x01)
+		set_flag(CARRY_FLAG);
+	else
+		clear_flag(CARRY_FLAG);
+
+	if (num)
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	if (n == HL)
+		write_8_bit(cpu->hl, num);
+	else
+		*reg_pointers[n] = num;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+void SLA_n(unsigned short n, unsigned short NA) {
+	unsigned char num;
+
+	if (n == HL)
+		num = read_8_bit(cpu->hl);
+	else
+		num = *reg_pointers[n];
+
+	num <<= 1;
+
+	if (num)
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	if (n == HL)
+		write_8_bit(cpu->hl, num);
+	else
+		*reg_pointers[n] = num;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+void SRA_n(unsigned short n, unsigned short NA) {
+	unsigned char num;
+
+	if (n == HL)
+		num = read_8_bit(cpu->hl);
+	else
+		num = *reg_pointers[n];
+	
+	if (num & 0x01)
+		clear_flag(CARRY_FLAG);
+	else
+		set_flag(CARRY_FLAG);
+
+	num = (num & 0x80) | (num >> 1);
+
+	if (num)
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	if (n == HL)
+		write_8_bit(cpu->hl, num);
+	else
+		*reg_pointers[n] = num;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+void SRL_n(unsigned short n, unsigned short NA) {
+	unsigned char num;
+
+	if (n == HL)
+		num = read_8_bit(cpu->hl);
+	else
+		num = *reg_pointers[n];
+
+	if (num & 0x01)
+		clear_flag(CARRY_FLAG);
+	else
+		set_flag(CARRY_FLAG);
+
+	num >>= 1;
+
+	if (num)
+		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
+
+	if (n == HL)
+		write_8_bit(cpu->hl, num);
+	else
+		*reg_pointers[n] = num;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
 }
