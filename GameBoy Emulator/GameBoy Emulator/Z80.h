@@ -61,6 +61,7 @@ void cpu_init();
 void cpu_reset();
 int cpu_fetch();
 int cpu_execute();
+int check_interrupts();
 
 //Function Pointer
 typedef void (*OPCODE_OPERATION)(int arg1, int arg2);

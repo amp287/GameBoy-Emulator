@@ -40,6 +40,10 @@ int cpu_execute() {
 	return 0;
 }
 
+int check_interrupts() {
+
+}
+
 void cpu_reset() {
 	cpu->pc = 0;
 	cpu->sp = 0;
@@ -859,4 +863,189 @@ void SRL_n(unsigned short n, unsigned short NA) {
 		*reg_pointers[n] = num;
 
 	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+}
+
+//Bit Opcodes
+
+//Needs to be tested (ALL OF THEM)
+void BIT_b_r(unsigned short b, unsigned short r) {
+	unsigned int i;
+	unsigned char bit_test = 1 << b;
+	unsigned int res;
+	
+	if (r == HL) {
+		res = read_8_bit(reg_pointers[HL]) & bit_test;
+	} else {
+		res = *reg_pointers[r] & bit_test;
+	}
+
+	if (!res)
+		set_flag(ZERO_FLAG);
+	else
+		clear_flag(ZERO_FLAG);
+
+	clear_flag(SUBTRACT_FLAG);
+	set_flag(HALF_CARRY_FLAG);
+}
+
+void SET_b_r(unsigned short b, unsigned short r) {
+	unsigned int i;
+	unsigned char bit_test = 1 << b;
+	unsigned int res;
+
+	if (r == HL) {
+		res = read_8_bit(*reg_pointers[HL]) | bit_test;
+		write_8_bit(*reg_pointers[HL], res);
+	}
+	else {
+		*reg_pointers[r] |= bit_test;
+	}
+}
+
+void RES_b_r(unsigned short b, unsigned short r) {
+	unsigned int i;
+	unsigned char bit_test = ~(1 << b);
+	unsigned int res;
+
+	if (r == HL) {
+		res = read_8_bit(*reg_pointers[HL]) & bit_test;
+		write_8_bit(*reg_pointers[HL], res);
+	}
+	else {
+		*reg_pointers[r] &= bit_test;
+	}
+}
+
+//Jumps
+void JP_nn(unsigned short nn) {
+	cpu->pc = nn;
+}
+
+void JP_cc_nn(unsigned short cc, unsigned short nn) {
+	char jump = 0;
+
+	switch (cc) {
+		case NZ:
+			jump = !(cpu->flags & ZERO_FLAG);
+			break;
+		case Z:
+			jump = cpu->flags & ZERO_FLAG;
+			break;
+		case NC:
+			jump = !(cpu->flags & CARRY_FLAG);
+			break;
+		case C:
+			jump = cpu->flags & CARRY_FLAG;
+			break;
+		default:
+			//Error here
+	}
+
+	if (jump)
+		cpu->pc = nn;
+}
+
+void JP_HL(unsigned short NA_1, unsigned short NA_2) {
+	cpu->pc = cpu->hl;
+}
+
+void JR_n(unsigned short n, unsigned short NA_1) {
+	cpu->pc += (signed char)n;
+}
+
+void JR_cc_n(unsigned short cc, unsigned short n) {
+	char jump = 0;
+
+	switch (cc) {
+	case NZ:
+		jump = !(cpu->flags & ZERO_FLAG);
+		break;
+	case Z:
+		jump = cpu->flags & ZERO_FLAG;
+		break;
+	case NC:
+		jump = !(cpu->flags & CARRY_FLAG);
+		break;
+	case C:
+		jump = cpu->flags & CARRY_FLAG;
+		break;
+	default:
+		//Error here
+	}
+
+	if (jump)
+		cpu->pc += (signed char) n;
+}
+
+//Calls
+
+void CALL_nn(unsigned short nn, unsigned short NA) {
+	cpu->sp -= 2;
+	write_16_bit(cpu->sp, cpu->pc); // Put next instruction on stack
+	cpu->pc = nn;
+}
+
+void CALL_cc_nn(unsigned short cc, unsigned short nn) {
+	char jump = 0;
+
+	switch (cc) {
+	case NZ:
+		jump = !(cpu->flags & ZERO_FLAG);
+		break;
+	case Z:
+		jump = cpu->flags & ZERO_FLAG;
+		break;
+	case NC:
+		jump = !(cpu->flags & CARRY_FLAG);
+		break;
+	case C:
+		jump = cpu->flags & CARRY_FLAG;
+		break;
+	default:
+		//Error here
+	}
+	CALL_nn(nn, 0);
+}
+
+//Restarts 
+
+//n = 0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38 
+void RST_n(unsigned short n, unsigned short NA) {
+	cpu->sp -= 2;
+	write_16_bit(cpu->sp, cpu->pc);
+	cpu->pc = n;
+}
+
+//Returns 
+void RET(unsigned short NA_1, unsigned short NA_2) {
+	cpu->pc = read_16_bit(cpu->sp);
+	cpu->sp += 2;
+}
+
+void RET_cc(unsigned short cc, unsigned short NA) {
+	char ret = 0;
+
+	switch (cc) {
+	case NZ:
+		ret = !(cpu->flags & ZERO_FLAG);
+		break;
+	case Z:
+		ret = cpu->flags & ZERO_FLAG;
+		break;
+	case NC:
+		ret = !(cpu->flags & CARRY_FLAG);
+		break;
+	case C:
+		ret = cpu->flags & CARRY_FLAG;
+		break;
+	default:
+		//Error here
+	}
+
+	if (ret)
+		RET(0, 0);
+}
+//Interuppt stuff
+void RETI(unsigned short NA_1, unsigned short NA_2) {
+
 }
