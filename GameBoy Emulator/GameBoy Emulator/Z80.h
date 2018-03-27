@@ -6,8 +6,7 @@
 #define CARRY_FLAG 0x10
 
 //cf is carry flag
-enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP};
-enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL };
+enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP, READ_8, READ_16};
 
 typedef struct {
 	// Program Counter
@@ -65,7 +64,7 @@ int cpu_execute();
 int check_interrupts();
 
 //Function Pointer
-typedef void (*OPCODE_OPERATION)(int arg1, int arg2);
+typedef void (*OPCODE_OPERATION)(unsigned short arg1, unsigned short arg2);
 
 typedef struct {
 	char *disassembly;
@@ -74,297 +73,103 @@ typedef struct {
 	void *r2;
 }INSTR;
 
-//8-Bit Loads
-void LD_nn_n(int arg1, int arg2);
-void LD_r1_r2(int arg1, int arg2);
-void LD_A_n(int arg1, int arg2);
-void LD_n_A(int arg1, int arg2);
-void LD_A_C(int arg1, int arg2);
-void LD_C_A(int arg1, int arg2);
-void LDD_A_HL(int arg1, int arg2);
-void LDD_HL_A(int arg1, int arg2);
-void LDI_A_HL(int arg1, int arg2);
-void LDI_HL_A(int arg1, int arg2);
-void LDH_n_A(int arg1, int arg2);
-void LDH_A_n(int arg1, int arg2);
-void LDI_A_HL(int arg1, int arg2);
+void LD_nn_n(unsigned short r1, unsigned short immediate);
+void LD_r1_r2(unsigned short r1, unsigned short r2);
+void LD_A_n(unsigned short a, unsigned short r2);
+void LD_A_nn(unsigned short a, unsigned short nn);
+void LD_A_imm(unsigned short a, unsigned short immediate);
+void LD_n_A(unsigned short n, unsigned short a);
+void LD_nn_A(unsigned short nn, unsigned short A);
+void LD_A_C(unsigned short A, unsigned short C);
+void LD_C_A(unsigned short C, unsigned short A);
+void LD_A_HLD(unsigned short A, unsigned short HL);
+void LD_HLD_A(unsigned short HL, unsigned short A);
+void LD_A_HLI(unsigned short A, unsigned short HL);
+void LD_HLI_A(unsigned short hl, unsigned short a);
+void LDH_n_A(unsigned short n, unsigned short A);
+void LDH_A_n(unsigned short A, unsigned short n);
 
 //16-Bit Loads
-void LD_n_nn(int arg1, int arg2);
+void LD_n_nn(unsigned short n, unsigned short nn);
+void LD_SP_HL(unsigned short sp, unsigned short hl);
+void LDHL_SP_n(unsigned short sp, unsigned short n);
+void LD_nn_SP(unsigned short nn, unsigned short sp);
+void PUSH_nn(unsigned short nn, unsigned short NA);
+void POP_nn(unsigned short nn, unsigned short NA);
 
-static INSTR OpcodesCD[] = {
-        {"RLC B", NULL, B, NULL},           //CDx00
-        {"RLC C", NULL, C, NULL},           //CDx01
-        {"RLC D", NULL, D, NULL},           //CDx02
-        {"RLC E", NULL, E, NULL},           //CDx03
-        {"RLC H", NULL, H, NULL},           //CDx04
-        {"RLC L", NULL, L, NULL},           //CDx05
-        {"RLC HL", NULL, HL, NULL},         //CDx06
-        {"RLC A", NULL, A, NULL},           //CDx07
-        {"RRC B", NULL, B, NULL},           //CDx08
-        {"RRC C", NULL, C, NULL},           //CDx09
-        {"RRC D", NULL, D, NULL},           //CDx0A
-        {"RRC E", NULL, E, NULL},           //CDx0B
-        {"RRC H", NULL, H, NULL},           //CDx0C
-        {"RRC L", NULL, L, NULL},           //CDx0D
-        {"RRC HL", NULL, HL, NULL},         //CDx0E
-        {"RRC A", NULL, A, NULL},           //CDx0F
+// 8 bit ALU
+//when using check whether immediate can be one of the register numbers
+void ADD_A_n(unsigned short a, unsigned short n);
 
-        {"RL B", NULL, B, NULL},            //CDx10
-        {"RL C", NULL, C, NULL},            //CDx11
-        {"RL D", NULL, D, NULL},            //CDx12
-        {"RL E", NULL, E, NULL},            //CDx13
-        {"RL H", NULL, H, NULL},            //CDx14
-        {"RL L", NULL, L, NULL},            //CDx15
-        {"RL HL", NULL, HL, NULL},          //CDx16
-        {"RL A", NULL, A, NULL},            //CDx17
-        {"RR B", NULL, B, NULL},            //CDx18
-        {"RR C", NULL, C, NULL},            //CDx19
-        {"RR D", NULL, D, NULL},            //CDx1A
-        {"RR E", NULL, E, NULL},            //CDx1B
-        {"RR H", NULL, H, NULL},            //CDx1C
-        {"RR L", NULL, L, NULL},            //CDx1D
-        {"RR HL", NULL, HL, NULL},          //CDx1E
-        {"RR A", NULL, A, NULL},            //CDx1F
+void ADC_A_n(unsigned short a, unsigned short n);
+void SUB_n(unsigned short n, unsigned short NA);
+void SBC_A_n(unsigned short a, unsigned short n);
+void AND_n(unsigned short n, unsigned short NA);
+void OR_n(unsigned short n, unsigned short NA);
+void XOR_n(unsigned short n, unsigned short NA);
+void CP_n(unsigned short n, unsigned short NA);
 
-        {"SLA B", NULL, B, NULL},           //CDx20
-        {"SLA C", NULL, C, NULL},           //CDx21
-        {"SLA D", NULL, D, NULL},           //CDx22
-        {"SLA E", NULL, E, NULL},           //CDx23
-        {"SLA H", NULL, H, NULL},           //CDx24
-        {"SLA L", NULL, L, NULL},           //CDx25
-        {"SLA HL", NULL, HL, NULL},         //CDx26
-        {"SLA A", NULL, A, NULL},           //CDx27
-        {"SRA B", NULL, B, NULL},           //CDx28
-        {"SRA C", NULL, C, NULL},           //CDx29
-        {"SRA D", NULL, D, NULL},           //CDx2A
-        {"SRA E", NULL, E, NULL},           //CDx2B
-        {"SRA H", NULL, H, NULL},           //CDx2C
-        {"SRA L", NULL, L, NULL},           //CDx2D
-        {"SRA HL", NULL, HL, NULL},         //CDx2E
-        {"SRA A", NULL, A, NULL},           //CDx2F
+void INC_n(unsigned short n, unsigned short NA);
+void DEC_n(unsigned short n, unsigned short NA);
 
-        {"SWAP B", NULL, B, NULL},          //CDx30
-        {"SWAP C", NULL, C, NULL},          //CDx31
-        {"SWAP D", NULL, D, NULL},          //CDx32
-        {"SWAP E", NULL, E, NULL},          //CDx33
-        {"SWAP H", NULL, H, NULL},          //CDx34
-        {"SWAP L", NULL, L, NULL},          //CDx35
-        {"SWAP HL", NULL, HL, NULL},        //CDx36
-        {"SWAP A", NULL, A, NULL},          //CDx37
-        {"SRL B", NULL, B, NULL},           //CDx38
-        {"SRL C", NULL, C, NULL},           //CDx39
-        {"SRL D", NULL, D, NULL},           //CDx3A
-        {"SRL E", NULL, E, NULL},           //CDx3B
-        {"SRL H", NULL, H, NULL},           //CDx3C
-        {"SRL L", NULL, L, NULL},           //CDx3D
-        {"SRL HL", NULL, HL, NULL},         //CDx3E
-        {"SRL A", NULL, A, NULL},           //CDx3F
+//16-Bit Arithmetic
+void ADD_HL_n(unsigned short HL, unsigned short n);
+void ADD_SP_n(unsigned short sp, unsigned short n);
+void INC_nn(unsigned short nn, unsigned short NA);
+void DEC_nn(unsigned short nn, unsigned short NA);
 
-        {"BIT 0 B", NULL, 0, B},            //CDx40
-        {"BIT 0 C", NULL, 0, C},            //CDx41
-        {"BIT 0 D", NULL, 0, D},            //CDx42
-        {"BIT 0 E", NULL, 0, E},            //CDx43
-        {"BIT 0 H", NULL, 0, H},            //CDx44
-        {"BIT 0 L", NULL, 0, L},            //CDx45
-        {"BIT 0 HL", NULL, 0, HL},          //CDx46
-        {"BIT 0 A", NULL, 0, A},            //CDx47
-        {"BIT 1 B", NULL, 1, B},            //CDx48
-        {"BIT 1 C", NULL, 1, C},            //CDx49
-        {"BIT 1 D", NULL, 1, D},            //CDx4A
-        {"BIT 1 E", NULL, 1, E},            //CDx4B
-        {"BIT 1 H", NULL, 1, H},            //CDx4C
-        {"BIT 1 L", NULL, 1, L},            //CDx4D
-        {"BIT 1 HL", NULL, 1, HL},          //CDx4E
-        {"BIT 1 A", NULL, 1, A},            //CDx4F
+//Miscellaneous
+void SWAP_n(unsigned short n, unsigned short NA);
+void DAA(unsigned short NA_1, unsigned short NA_2);
+void CPL(unsigned short NA_1, unsigned short NA_2);
+void CCF(unsigned short NA_1, unsigned short NA_2);
+void SCF(unsigned short NA_1, unsigned short NA_2);
+void NOP(unsigned short NA_1, unsigned short NA_2);
+void HALT(unsigned short NA_1, unsigned short NA_2);
+void STOP(unsigned short NA_1, unsigned short NA_2);
+void DI(unsigned short NA_1, unsigned short NA_2);
+void EI(unsigned short NA_1, unsigned short NA_2);
 
-        {"BIT 2 B", NULL, 2, B},            //CDx50
-        {"BIT 2 C", NULL, 2, C},            //CDx51
-        {"BIT 2 D", NULL, 2, D},            //CDx52
-        {"BIT 2 E", NULL, 2, E},            //CDx53
-        {"BIT 2 H", NULL, 2, H},            //CDx54
-        {"BIT 2 L", NULL, 2, L},            //CDx55
-        {"BIT 2 HL", NULL, 2, HL},          //CDx56
-        {"BIT 2 A", NULL, 2, A},            //CDx57
-        {"BIT 3 B", NULL, 3, B},            //CDx58
-        {"BIT 3 C", NULL, 3, C},            //CDx59
-        {"BIT 3 D", NULL, 3, D},            //CDx5A
-        {"BIT 3 E", NULL, 3, E},            //CDx5B
-        {"BIT 3 H", NULL, 3, H},            //CDx5C
-        {"BIT 3 L", NULL, 3, L},            //CDx5D
-        {"BIT 3 HL", NULL, 3, HL},          //CDx5E
-        {"BIT 3 A", NULL, 3, A},            //CDx5F
+//Rotates & Shifts
 
-        {"BIT 4 B", NULL, 4, B},            //CDx60
-        {"BIT 4 C", NULL, 4, C},            //CDx61
-        {"BIT 4 D", NULL, 4, D},            //CDx62
-        {"BIT 4 E", NULL, 4, E},            //CDx63
-        {"BIT 4 H", NULL, 4, H},            //CDx64
-        {"BIT 4 L", NULL, 4, L},            //CDx65
-        {"BIT 4 HL", NULL, 4, HL},          //CDx66
-        {"BIT 4 A", NULL, 4, A},            //CDx67
-        {"BIT 5 B", NULL, 5, B},            //CDx68
-        {"BIT 5 C", NULL, 5, C},            //CDx69
-        {"BIT 5 D", NULL, 5, D},            //CDx6A
-        {"BIT 5 E", NULL, 5, E},            //CDx6B
-        {"BIT 5 H", NULL, 5, H},            //CDx6C
-        {"BIT 5 L", NULL, 5, L},            //CDx6D
-        {"BIT 5 HL", NULL, 5, HL},          //CDx6E
-        {"BIT 5 A", NULL, 5, A},            //CDx6F
 
-        {"BIT 6 B", NULL, 6, B},            //CDx70
-        {"BIT 6 C", NULL, 6, C},            //CDx71
-        {"BIT 6 D", NULL, 6, D},            //CDx72
-        {"BIT 6 E", NULL, 6, E},            //CDx73
-        {"BIT 6 H", NULL, 6, H},            //CDx74
-        {"BIT 6 L", NULL, 6, L},            //CDx75
-        {"BIT 6 HL", NULL, 6, HL},          //CDx76
-        {"BIT 6 A", NULL, 6, A},            //CDx77
-        {"BIT 7 B", NULL, 7, B},            //CDx78
-        {"BIT 7 C", NULL, 7, C},            //CDx79
-        {"BIT 7 D", NULL, 7, D},            //CDx7A
-        {"BIT 7 E", NULL, 7, E},            //CDx7B
-        {"BIT 7 H", NULL, 7, H},            //CDx7C
-        {"BIT 7 L", NULL, 7, L},            //CDx7D
-        {"BIT 7 HL", NULL, 7, HL},          //CDx7E
-        {"BIT 7 A", NULL, 7, A},            //CDx7F
+void RLCA(unsigned short A, unsigned short NA);
+void RLA(unsigned short A, unsigned short NA);
+void RRCA(unsigned short A, unsigned short NA);
+void RRA(unsigned short A, unsigned short NA);
+void RLC_n(unsigned short n, unsigned short NA);
+void RL_n(unsigned short n, unsigned short NA);
+void RRC_n(unsigned short n, unsigned short NA);
+void RR_n(unsigned short n, unsigned short NA);
+void SLA_n(unsigned short n, unsigned short NA);
+void SRA_n(unsigned short n, unsigned short NA);
+void SRL_n(unsigned short n, unsigned short NA);
 
-        {"RES 0 B", NULL, 0, B},            //CDx80
-        {"RES 0 C", NULL, 0, C},            //CDx81
-        {"RES 0 D", NULL, 0, D},            //CDx82
-        {"RES 0 E", NULL, 0, E},            //CDx83
-        {"RES 0 H", NULL, 0, H},            //CDx84
-        {"RES 0 L", NULL, 0, L},            //CDx85
-        {"RES 0 HL", NULL, 0, HL},          //CDx86
-        {"RES 0 A", NULL, 0, A},            //CDx87
-        {"RES 1 B", NULL, 1, B},            //CDx88
-        {"RES 1 C", NULL, 1, C},            //CDx89
-        {"RES 1 D", NULL, 1, D},            //CDx8A
-        {"RES 1 E", NULL, 1, E},            //CDx8B
-        {"RES 1 H", NULL, 1, H},            //CDx8C
-        {"RES 1 L", NULL, 1, L},            //CDx8D
-        {"RES 1 HL", NULL, 1, HL},          //CDx8E
-        {"RES 1 A", NULL, 1, A},            //CDx8F
+//Bit Opcodes
+void BIT_b_r(unsigned short b, unsigned short r);
+void SET_b_r(unsigned short b, unsigned short r);
+void RES_b_r(unsigned short b, unsigned short r);
 
-        {"RES 2 B", NULL, 2, B},            //CDx90
-        {"RES 2 C", NULL, 2, C},            //CDx91
-        {"RES 2 D", NULL, 2, D},            //CDx92
-        {"RES 2 E", NULL, 2, E},            //CDx93
-        {"RES 2 H", NULL, 2, H},            //CDx94
-        {"RES 2 L", NULL, 2, L},            //CDx95
-        {"RES 2 HL", NULL, 2, HL},          //CDx96
-        {"RES 2 A", NULL, 2, A},            //CDx97
-        {"RES 3 B", NULL, 3, B},            //CDx98
-        {"RES 3 C", NULL, 3, C},            //CDx99
-        {"RES 3 D", NULL, 3, D},            //CDx9A
-        {"RES 3 E", NULL, 3, E},            //CDx9B
-        {"RES 3 H", NULL, 3, H},            //CDx9C
-        {"RES 3 L", NULL, 3, L},            //CDx9D
-        {"RES 3 HL", NULL, 3, HL},          //CDx9E
-        {"RES 3 A", NULL, 3, A},            //CDx9F
+//Jumps
+void JP_nn(unsigned short nn);
+void JP_cc_nn(unsigned short cc, unsigned short nn);
+void JP_HL(unsigned short NA_1, unsigned short NA_2);
+void JR_n(unsigned short n, unsigned short NA_1);
+void JR_cc_n(unsigned short cc, unsigned short n);
 
-		{"RES 4 B", NULL, 4, B},			//CDxA0
-		{"RES 4 C", NULL, 4, C},			//CDxA1
-		{"RES 4 D", NULL, 4, D},			//CDxA2
-		{"RES 4 E", NULL, 4, E},			//CDxA3
-		{"RES 4 H", NULL, 4, H},			//CDxA4
-		{"RES 4 L", NULL, 4, L},			//CDxA5
-		{"RES 4 HL", NULL, 4, HL},			//CDxA6
-		{"RES 4 A", NULL, 4, A},			//CDxA7
-		{"RES 5 B", NULL, 5, B},			//CDxA8
-		{"RES 5 C", NULL, 5, C},			//CDxA9
-		{"RES 5 D", NULL, 5, D},			//CDxAA
-		{"RES 5 E", NULL, 5, E},			//CDxAB
-		{"RES 5 H", NULL, 5, H},			//CDxAC
-		{"RES 5 L", NULL, 5, L},			//CDxAD
-		{"RES 5 HL", NULL, 5, HL},			//CDxAE
-		{"RES 5 A", NULL, 5, A},			//CDxAF
+//Calls
+void CALL_nn(unsigned short nn, unsigned short NA);
+void CALL_cc_nn(unsigned short cc, unsigned short nn);
 
-		{"RES 6 B", NULL, 6, B},			//CDxB0
-		{"RES 6 C", NULL, 6, C},			//CDxB1
-		{"RES 6 D", NULL, 6, D},			//CDxB2
-		{"RES 6 E", NULL, 6, E},			//CDxB3
-		{"RES 6 H", NULL, 6, H},			//CDxB4
-		{"RES 6 L", NULL, 6, L},			//CDxB5
-		{"RES 6 HL", NULL, 6, HL},			//CDxB6
-		{"RES 6 A", NULL, 6, A},			//CDxB7
-		{"RES 7 B", NULL, 7, B},			//CDxB8
-		{"RES 7 C", NULL, 7, C},			//CDxB9
-		{"RES 7 D", NULL, 7, D},			//CDxBA
-		{"RES 7 E", NULL, 7, E},			//CDxBB
-		{"RES 7 H", NULL, 7, H},			//CDxBC
-		{"RES 7 L", NULL, 7, L},			//CDxBD
-		{"RES 7 HL", NULL, 7, HL},			//CDxBE
-		{"RES 7 A", NULL, 7, A},			//CDxBF
+//Restarts 
 
-		{"SET 0 B", NULL, 0, B},			//CDxC0
-		{"SET 0 C", NULL, 0, C},			//CDxC1
-		{"SET 0 D", NULL, 0, D},			//CDxC2
-		{"SET 0 E", NULL, 0, E},			//CDxC3
-		{"SET 0 H", NULL, 0, H},			//CDxC4
-		{"SET 0 L", NULL, 0, L},			//CDxC5
-		{"SET 0 HL", NULL, 0, HL},			//CDxC6
-		{"SET 0 A", NULL, 0, A},			//CDxC7
-		{"SET 1 B", NULL, 1, B},			//CDxC8
-		{"SET 1 C", NULL, 1, C},			//CDxC9
-		{"SET 1 D", NULL, 1, D},			//CDxCA
-		{"SET 1 E", NULL, 1, E},			//CDxCB
-		{"SET 1 H", NULL, 1, H},			//CDxCC
-		{"SET 1 L", NULL, 1, L},			//CDxCD
-		{"SET 1 HL", NULL, 1, HL},			//CDxCE
-		{"SET 1 A", NULL, 1, A},			//CDxCF
+//n = 0x0, 0x8, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38 
+void RST_n(unsigned short n, unsigned short NA);
 
-        {"SET 2 B", NULL, 2, B},            //CDxD0
-        {"SET 2 C", NULL, 2, C},            //CDxD1
-        {"SET 2 D", NULL, 2, D},            //CDxD2
-        {"SET 2 E", NULL, 2, E},            //CDxD3
-        {"SET 2 H", NULL, 2, H},            //CDxD4
-        {"SET 2 L", NULL, 2, L},            //CDxD5
-        {"SET 2 HL", NULL, 2, HL},          //CDxD6
-        {"SET 2 A", NULL, 2, A},            //CDxD7
-        {"SET 3 B", NULL, 3, B},            //CDxD8
-        {"SET 3 C", NULL, 3, C},            //CDxD9
-        {"SET 3 D", NULL, 3, D},            //CDxDA
-        {"SET 3 E", NULL, 3, E},            //CDxDB
-        {"SET 3 H", NULL, 3, H},            //CDxDC
-        {"SET 3 L", NULL, 3, L},            //CDxDD
-        {"SET 3 HL", NULL, 3, HL},          //CDxDE
-        {"SET 3 A", NULL, 3, A},            //CDxDF
-
-        {"SET 4 B", NULL, 4, B},            //CDxE0
-        {"SET 4 C", NULL, 4, C},            //CDxE1
-        {"SET 4 D", NULL, 4, D},            //CDxE2
-        {"SET 4 E", NULL, 4, E},            //CDxE3
-        {"SET 4 H", NULL, 4, H},            //CDxE4
-        {"SET 4 L", NULL, 4, L},            //CDxE5
-        {"SET 4 HL", NULL, 4, HL},          //CDxE6
-        {"SET 4 A", NULL, 4, A},            //CDxE7
-        {"SET 5 B", NULL, 5, B},            //CDxE8
-        {"SET 5 C", NULL, 5, C},            //CDxE9
-        {"SET 5 D", NULL, 5, D},            //CDxEA
-        {"SET 5 E", NULL, 5, E},            //CDxEB
-        {"SET 5 H", NULL, 5, H},            //CDxEC
-        {"SET 5 L", NULL, 5, L},            //CDxED
-        {"SET 5 HL", NULL, 5, HL},          //CDxEE
-        {"SET 5 A", NULL, 5, A},            //CDxEF
-
-        {"SET 6 B", NULL, 6, B},            //CDxF0
-        {"SET 6 C", NULL, 6, C},            //CDxF1
-        {"SET 6 D", NULL, 6, D},            //CDxF2
-        {"SET 6 E", NULL, 6, E},            //CDxF3
-        {"SET 6 H", NULL, 6, H},            //CDxF4
-        {"SET 6 L", NULL, 6, L},            //CDxF5
-        {"SET 6 HL", NULL, 6, HL},          //CDxF6
-        {"SET 6 A", NULL, 6, A},            //CDxF7
-        {"SET 7 B", NULL, 7, B},            //CDxF8
-        {"SET 7 C", NULL, 7, C},            //CDxF9
-        {"SET 7 D", NULL, 7, D},            //CDxFA
-        {"SET 7 E", NULL, 7, E},            //CDxFB
-        {"SET 7 H", NULL, 7, H},            //CDxFC
-        {"SET 7 L", NULL, 7, L},            //CDxFD
-        {"SET 7 HL", NULL, 7, HL},          //CDxFE
-        {"SET 7 A", NULL, 7, A},            //CDxFF
-};
+//Returns 
+void RET(unsigned short NA_1, unsigned short NA_2);
+void RET_cc(unsigned short cc, unsigned short NA);
+void RETI(unsigned short NA_1, unsigned short NA_2);
 
 
 static INSTR Opcodes[] = {
@@ -374,7 +179,7 @@ static INSTR Opcodes[] = {
 	{"INC BC", NULL, BC, NULL},		//0x03
 	{"INC B", NULL, B, NULL},			//0x04
 	{"DEC B", NULL, B, NULL},			//0x05
-	{"LD B, n", NULL, B, NULL},		//0x06
+	{"LD B, n", LD_nn_n, B, NULL},		//0x06
 	{"RLC A", NULL, A, NULL},			//0x07
 	{"LD nn, SP", NULL, NULL, SP},	//0x08
 	{"ADD HL, BC", NULL, HL, BC},	//0x09
@@ -624,4 +429,278 @@ static INSTR Opcodes[] = {
 	{"XX", NULL, NULL, NULL},			//0xFD
 	{"CP n", NULL, NULL, NULL},			//0xFE
 	{"RST 38", NULL, "28", NULL},		//0xFF
+};
+
+static INSTR OpcodesCD[] = {
+	{ "RLC B", NULL, B, NULL },           //CDx00
+	{ "RLC C", NULL, C, NULL },           //CDx01
+	{ "RLC D", NULL, D, NULL },           //CDx02
+	{ "RLC E", NULL, E, NULL },           //CDx03
+	{ "RLC H", NULL, H, NULL },           //CDx04
+	{ "RLC L", NULL, L, NULL },           //CDx05
+	{ "RLC HL", NULL, HL, NULL },         //CDx06
+	{ "RLC A", NULL, A, NULL },           //CDx07
+	{ "RRC B", NULL, B, NULL },           //CDx08
+	{ "RRC C", NULL, C, NULL },           //CDx09
+	{ "RRC D", NULL, D, NULL },           //CDx0A
+	{ "RRC E", NULL, E, NULL },           //CDx0B
+	{ "RRC H", NULL, H, NULL },           //CDx0C
+	{ "RRC L", NULL, L, NULL },           //CDx0D
+	{ "RRC HL", NULL, HL, NULL },         //CDx0E
+	{ "RRC A", NULL, A, NULL },           //CDx0F
+
+	{ "RL B", NULL, B, NULL },            //CDx10
+	{ "RL C", NULL, C, NULL },            //CDx11
+	{ "RL D", NULL, D, NULL },            //CDx12
+	{ "RL E", NULL, E, NULL },            //CDx13
+	{ "RL H", NULL, H, NULL },            //CDx14
+	{ "RL L", NULL, L, NULL },            //CDx15
+	{ "RL HL", NULL, HL, NULL },          //CDx16
+	{ "RL A", NULL, A, NULL },            //CDx17
+	{ "RR B", NULL, B, NULL },            //CDx18
+	{ "RR C", NULL, C, NULL },            //CDx19
+	{ "RR D", NULL, D, NULL },            //CDx1A
+	{ "RR E", NULL, E, NULL },            //CDx1B
+	{ "RR H", NULL, H, NULL },            //CDx1C
+	{ "RR L", NULL, L, NULL },            //CDx1D
+	{ "RR HL", NULL, HL, NULL },          //CDx1E
+	{ "RR A", NULL, A, NULL },            //CDx1F
+
+	{ "SLA B", NULL, B, NULL },           //CDx20
+	{ "SLA C", NULL, C, NULL },           //CDx21
+	{ "SLA D", NULL, D, NULL },           //CDx22
+	{ "SLA E", NULL, E, NULL },           //CDx23
+	{ "SLA H", NULL, H, NULL },           //CDx24
+	{ "SLA L", NULL, L, NULL },           //CDx25
+	{ "SLA HL", NULL, HL, NULL },         //CDx26
+	{ "SLA A", NULL, A, NULL },           //CDx27
+	{ "SRA B", NULL, B, NULL },           //CDx28
+	{ "SRA C", NULL, C, NULL },           //CDx29
+	{ "SRA D", NULL, D, NULL },           //CDx2A
+	{ "SRA E", NULL, E, NULL },           //CDx2B
+	{ "SRA H", NULL, H, NULL },           //CDx2C
+	{ "SRA L", NULL, L, NULL },           //CDx2D
+	{ "SRA HL", NULL, HL, NULL },         //CDx2E
+	{ "SRA A", NULL, A, NULL },           //CDx2F
+
+	{ "SWAP B", NULL, B, NULL },          //CDx30
+	{ "SWAP C", NULL, C, NULL },          //CDx31
+	{ "SWAP D", NULL, D, NULL },          //CDx32
+	{ "SWAP E", NULL, E, NULL },          //CDx33
+	{ "SWAP H", NULL, H, NULL },          //CDx34
+	{ "SWAP L", NULL, L, NULL },          //CDx35
+	{ "SWAP HL", NULL, HL, NULL },        //CDx36
+	{ "SWAP A", NULL, A, NULL },          //CDx37
+	{ "SRL B", NULL, B, NULL },           //CDx38
+	{ "SRL C", NULL, C, NULL },           //CDx39
+	{ "SRL D", NULL, D, NULL },           //CDx3A
+	{ "SRL E", NULL, E, NULL },           //CDx3B
+	{ "SRL H", NULL, H, NULL },           //CDx3C
+	{ "SRL L", NULL, L, NULL },           //CDx3D
+	{ "SRL HL", NULL, HL, NULL },         //CDx3E
+	{ "SRL A", NULL, A, NULL },           //CDx3F
+
+	{ "BIT 0 B", NULL, 0, B },            //CDx40
+	{ "BIT 0 C", NULL, 0, C },            //CDx41
+	{ "BIT 0 D", NULL, 0, D },            //CDx42
+	{ "BIT 0 E", NULL, 0, E },            //CDx43
+	{ "BIT 0 H", NULL, 0, H },            //CDx44
+	{ "BIT 0 L", NULL, 0, L },            //CDx45
+	{ "BIT 0 HL", NULL, 0, HL },          //CDx46
+	{ "BIT 0 A", NULL, 0, A },            //CDx47
+	{ "BIT 1 B", NULL, 1, B },            //CDx48
+	{ "BIT 1 C", NULL, 1, C },            //CDx49
+	{ "BIT 1 D", NULL, 1, D },            //CDx4A
+	{ "BIT 1 E", NULL, 1, E },            //CDx4B
+	{ "BIT 1 H", NULL, 1, H },            //CDx4C
+	{ "BIT 1 L", NULL, 1, L },            //CDx4D
+	{ "BIT 1 HL", NULL, 1, HL },          //CDx4E
+	{ "BIT 1 A", NULL, 1, A },            //CDx4F
+
+	{ "BIT 2 B", NULL, 2, B },            //CDx50
+	{ "BIT 2 C", NULL, 2, C },            //CDx51
+	{ "BIT 2 D", NULL, 2, D },            //CDx52
+	{ "BIT 2 E", NULL, 2, E },            //CDx53
+	{ "BIT 2 H", NULL, 2, H },            //CDx54
+	{ "BIT 2 L", NULL, 2, L },            //CDx55
+	{ "BIT 2 HL", NULL, 2, HL },          //CDx56
+	{ "BIT 2 A", NULL, 2, A },            //CDx57
+	{ "BIT 3 B", NULL, 3, B },            //CDx58
+	{ "BIT 3 C", NULL, 3, C },            //CDx59
+	{ "BIT 3 D", NULL, 3, D },            //CDx5A
+	{ "BIT 3 E", NULL, 3, E },            //CDx5B
+	{ "BIT 3 H", NULL, 3, H },            //CDx5C
+	{ "BIT 3 L", NULL, 3, L },            //CDx5D
+	{ "BIT 3 HL", NULL, 3, HL },          //CDx5E
+	{ "BIT 3 A", NULL, 3, A },            //CDx5F
+
+	{ "BIT 4 B", NULL, 4, B },            //CDx60
+	{ "BIT 4 C", NULL, 4, C },            //CDx61
+	{ "BIT 4 D", NULL, 4, D },            //CDx62
+	{ "BIT 4 E", NULL, 4, E },            //CDx63
+	{ "BIT 4 H", NULL, 4, H },            //CDx64
+	{ "BIT 4 L", NULL, 4, L },            //CDx65
+	{ "BIT 4 HL", NULL, 4, HL },          //CDx66
+	{ "BIT 4 A", NULL, 4, A },            //CDx67
+	{ "BIT 5 B", NULL, 5, B },            //CDx68
+	{ "BIT 5 C", NULL, 5, C },            //CDx69
+	{ "BIT 5 D", NULL, 5, D },            //CDx6A
+	{ "BIT 5 E", NULL, 5, E },            //CDx6B
+	{ "BIT 5 H", NULL, 5, H },            //CDx6C
+	{ "BIT 5 L", NULL, 5, L },            //CDx6D
+	{ "BIT 5 HL", NULL, 5, HL },          //CDx6E
+	{ "BIT 5 A", NULL, 5, A },            //CDx6F
+
+	{ "BIT 6 B", NULL, 6, B },            //CDx70
+	{ "BIT 6 C", NULL, 6, C },            //CDx71
+	{ "BIT 6 D", NULL, 6, D },            //CDx72
+	{ "BIT 6 E", NULL, 6, E },            //CDx73
+	{ "BIT 6 H", NULL, 6, H },            //CDx74
+	{ "BIT 6 L", NULL, 6, L },            //CDx75
+	{ "BIT 6 HL", NULL, 6, HL },          //CDx76
+	{ "BIT 6 A", NULL, 6, A },            //CDx77
+	{ "BIT 7 B", NULL, 7, B },            //CDx78
+	{ "BIT 7 C", NULL, 7, C },            //CDx79
+	{ "BIT 7 D", NULL, 7, D },            //CDx7A
+	{ "BIT 7 E", NULL, 7, E },            //CDx7B
+	{ "BIT 7 H", NULL, 7, H },            //CDx7C
+	{ "BIT 7 L", NULL, 7, L },            //CDx7D
+	{ "BIT 7 HL", NULL, 7, HL },          //CDx7E
+	{ "BIT 7 A", NULL, 7, A },            //CDx7F
+
+	{ "RES 0 B", NULL, 0, B },            //CDx80
+	{ "RES 0 C", NULL, 0, C },            //CDx81
+	{ "RES 0 D", NULL, 0, D },            //CDx82
+	{ "RES 0 E", NULL, 0, E },            //CDx83
+	{ "RES 0 H", NULL, 0, H },            //CDx84
+	{ "RES 0 L", NULL, 0, L },            //CDx85
+	{ "RES 0 HL", NULL, 0, HL },          //CDx86
+	{ "RES 0 A", NULL, 0, A },            //CDx87
+	{ "RES 1 B", NULL, 1, B },            //CDx88
+	{ "RES 1 C", NULL, 1, C },            //CDx89
+	{ "RES 1 D", NULL, 1, D },            //CDx8A
+	{ "RES 1 E", NULL, 1, E },            //CDx8B
+	{ "RES 1 H", NULL, 1, H },            //CDx8C
+	{ "RES 1 L", NULL, 1, L },            //CDx8D
+	{ "RES 1 HL", NULL, 1, HL },          //CDx8E
+	{ "RES 1 A", NULL, 1, A },            //CDx8F
+
+	{ "RES 2 B", NULL, 2, B },            //CDx90
+	{ "RES 2 C", NULL, 2, C },            //CDx91
+	{ "RES 2 D", NULL, 2, D },            //CDx92
+	{ "RES 2 E", NULL, 2, E },            //CDx93
+	{ "RES 2 H", NULL, 2, H },            //CDx94
+	{ "RES 2 L", NULL, 2, L },            //CDx95
+	{ "RES 2 HL", NULL, 2, HL },          //CDx96
+	{ "RES 2 A", NULL, 2, A },            //CDx97
+	{ "RES 3 B", NULL, 3, B },            //CDx98
+	{ "RES 3 C", NULL, 3, C },            //CDx99
+	{ "RES 3 D", NULL, 3, D },            //CDx9A
+	{ "RES 3 E", NULL, 3, E },            //CDx9B
+	{ "RES 3 H", NULL, 3, H },            //CDx9C
+	{ "RES 3 L", NULL, 3, L },            //CDx9D
+	{ "RES 3 HL", NULL, 3, HL },          //CDx9E
+	{ "RES 3 A", NULL, 3, A },            //CDx9F
+
+	{ "RES 4 B", NULL, 4, B },			//CDxA0
+	{ "RES 4 C", NULL, 4, C },			//CDxA1
+	{ "RES 4 D", NULL, 4, D },			//CDxA2
+	{ "RES 4 E", NULL, 4, E },			//CDxA3
+	{ "RES 4 H", NULL, 4, H },			//CDxA4
+	{ "RES 4 L", NULL, 4, L },			//CDxA5
+	{ "RES 4 HL", NULL, 4, HL },			//CDxA6
+	{ "RES 4 A", NULL, 4, A },			//CDxA7
+	{ "RES 5 B", NULL, 5, B },			//CDxA8
+	{ "RES 5 C", NULL, 5, C },			//CDxA9
+	{ "RES 5 D", NULL, 5, D },			//CDxAA
+	{ "RES 5 E", NULL, 5, E },			//CDxAB
+	{ "RES 5 H", NULL, 5, H },			//CDxAC
+	{ "RES 5 L", NULL, 5, L },			//CDxAD
+	{ "RES 5 HL", NULL, 5, HL },			//CDxAE
+	{ "RES 5 A", NULL, 5, A },			//CDxAF
+
+	{ "RES 6 B", NULL, 6, B },			//CDxB0
+	{ "RES 6 C", NULL, 6, C },			//CDxB1
+	{ "RES 6 D", NULL, 6, D },			//CDxB2
+	{ "RES 6 E", NULL, 6, E },			//CDxB3
+	{ "RES 6 H", NULL, 6, H },			//CDxB4
+	{ "RES 6 L", NULL, 6, L },			//CDxB5
+	{ "RES 6 HL", NULL, 6, HL },			//CDxB6
+	{ "RES 6 A", NULL, 6, A },			//CDxB7
+	{ "RES 7 B", NULL, 7, B },			//CDxB8
+	{ "RES 7 C", NULL, 7, C },			//CDxB9
+	{ "RES 7 D", NULL, 7, D },			//CDxBA
+	{ "RES 7 E", NULL, 7, E },			//CDxBB
+	{ "RES 7 H", NULL, 7, H },			//CDxBC
+	{ "RES 7 L", NULL, 7, L },			//CDxBD
+	{ "RES 7 HL", NULL, 7, HL },			//CDxBE
+	{ "RES 7 A", NULL, 7, A },			//CDxBF
+
+	{ "SET 0 B", NULL, 0, B },			//CDxC0
+	{ "SET 0 C", NULL, 0, C },			//CDxC1
+	{ "SET 0 D", NULL, 0, D },			//CDxC2
+	{ "SET 0 E", NULL, 0, E },			//CDxC3
+	{ "SET 0 H", NULL, 0, H },			//CDxC4
+	{ "SET 0 L", NULL, 0, L },			//CDxC5
+	{ "SET 0 HL", NULL, 0, HL },			//CDxC6
+	{ "SET 0 A", NULL, 0, A },			//CDxC7
+	{ "SET 1 B", NULL, 1, B },			//CDxC8
+	{ "SET 1 C", NULL, 1, C },			//CDxC9
+	{ "SET 1 D", NULL, 1, D },			//CDxCA
+	{ "SET 1 E", NULL, 1, E },			//CDxCB
+	{ "SET 1 H", NULL, 1, H },			//CDxCC
+	{ "SET 1 L", NULL, 1, L },			//CDxCD
+	{ "SET 1 HL", NULL, 1, HL },			//CDxCE
+	{ "SET 1 A", NULL, 1, A },			//CDxCF
+
+	{ "SET 2 B", NULL, 2, B },            //CDxD0
+	{ "SET 2 C", NULL, 2, C },            //CDxD1
+	{ "SET 2 D", NULL, 2, D },            //CDxD2
+	{ "SET 2 E", NULL, 2, E },            //CDxD3
+	{ "SET 2 H", NULL, 2, H },            //CDxD4
+	{ "SET 2 L", NULL, 2, L },            //CDxD5
+	{ "SET 2 HL", NULL, 2, HL },          //CDxD6
+	{ "SET 2 A", NULL, 2, A },            //CDxD7
+	{ "SET 3 B", NULL, 3, B },            //CDxD8
+	{ "SET 3 C", NULL, 3, C },            //CDxD9
+	{ "SET 3 D", NULL, 3, D },            //CDxDA
+	{ "SET 3 E", NULL, 3, E },            //CDxDB
+	{ "SET 3 H", NULL, 3, H },            //CDxDC
+	{ "SET 3 L", NULL, 3, L },            //CDxDD
+	{ "SET 3 HL", NULL, 3, HL },          //CDxDE
+	{ "SET 3 A", NULL, 3, A },            //CDxDF
+
+	{ "SET 4 B", NULL, 4, B },            //CDxE0
+	{ "SET 4 C", NULL, 4, C },            //CDxE1
+	{ "SET 4 D", NULL, 4, D },            //CDxE2
+	{ "SET 4 E", NULL, 4, E },            //CDxE3
+	{ "SET 4 H", NULL, 4, H },            //CDxE4
+	{ "SET 4 L", NULL, 4, L },            //CDxE5
+	{ "SET 4 HL", NULL, 4, HL },          //CDxE6
+	{ "SET 4 A", NULL, 4, A },            //CDxE7
+	{ "SET 5 B", NULL, 5, B },            //CDxE8
+	{ "SET 5 C", NULL, 5, C },            //CDxE9
+	{ "SET 5 D", NULL, 5, D },            //CDxEA
+	{ "SET 5 E", NULL, 5, E },            //CDxEB
+	{ "SET 5 H", NULL, 5, H },            //CDxEC
+	{ "SET 5 L", NULL, 5, L },            //CDxED
+	{ "SET 5 HL", NULL, 5, HL },          //CDxEE
+	{ "SET 5 A", NULL, 5, A },            //CDxEF
+
+	{ "SET 6 B", NULL, 6, B },            //CDxF0
+	{ "SET 6 C", NULL, 6, C },            //CDxF1
+	{ "SET 6 D", NULL, 6, D },            //CDxF2
+	{ "SET 6 E", NULL, 6, E },            //CDxF3
+	{ "SET 6 H", NULL, 6, H },            //CDxF4
+	{ "SET 6 L", NULL, 6, L },            //CDxF5
+	{ "SET 6 HL", NULL, 6, HL },          //CDxF6
+	{ "SET 6 A", NULL, 6, A },            //CDxF7
+	{ "SET 7 B", NULL, 7, B },            //CDxF8
+	{ "SET 7 C", NULL, 7, C },            //CDxF9
+	{ "SET 7 D", NULL, 7, D },            //CDxFA
+	{ "SET 7 E", NULL, 7, E },            //CDxFB
+	{ "SET 7 H", NULL, 7, H },            //CDxFC
+	{ "SET 7 L", NULL, 7, L },            //CDxFD
+	{ "SET 7 HL", NULL, 7, HL },          //CDxFE
+	{ "SET 7 A", NULL, 7, A },            //CDxFF
 };
