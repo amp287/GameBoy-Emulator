@@ -6,6 +6,16 @@ CPU *cpu;
 
 unsigned char *reg_pointers[11];
 
+typedef struct INSTRUCTION_REGISTER {
+	int instruction_index;
+	unsigned char is_cb;
+	OPCODE_OPERATION execute;
+	unsigned short first_param;
+	unsigned short second_param;
+}INSTRUCTION_REGISTER;
+
+INSTRUCTION_REGISTER ir;
+
 void cpu_init() {
 	cpu = malloc(sizeof(CPU));
 
@@ -25,18 +35,43 @@ void cpu_init() {
 }
 
 int cpu_fetch() {
+	int index = read_8_bit(cpu->pc++);
+	INSTR *map;
 
+	if (index == 0xCB) {
+		map = opcodesCB;
+		ir.is_cb = 1;
+		index = read_8_bit(cpu->pc++);
+	} else {
+		map = opcodes;
+		ir.is_cb = 0;
+	}
+
+	ir.instruction_index = index;
+
+	if (map[index].r2 == READ_8)
+		ir.second_param = read_8_bit(cpu->pc++);
+	else if (map[index].r2 == READ_16)
+		ir.second_param = read_16_bit(cpu->pc += 2);
+	else
+		ir.second_param = map[index].r2;
+
+	if (map[index].r1 == READ_8 || map[index].r1 == READ_16)
+		ir.first_param = map[index].r1;
+	else
+		ir.first_param = map[index].r1;
+
+	ir.execute = map[index].execute;
+	
 	return 0;
 }
 
 int cpu_execute() {
-	*reg_pointers[HL] = 22;
-	*reg_pointers[A] = 'b';
-	LD_r1_r2(HL, A);
+	//if DEBUG
+	//display assembly or print log
 
-	unsigned char ans = read_8_bit(22);
-
-	printf("Memory[22]: %c\n", ans);
+	(ir.execute)(ir.first_param, ir.second_param);
+	
 	return 0;
 }
 
@@ -85,8 +120,9 @@ void LD_r1_r2(unsigned short r1, unsigned short r2) {
 	}
 }
 
-void LD_A_n(unsigned short a, unsigned short r2) {
-	switch (r2) {
+void LD_A_n(unsigned short type, unsigned short n) {
+
+	switch (n) {
 		case BC:
 			cpu->a = read_8_bit(cpu->bc);
 			break;
@@ -97,7 +133,7 @@ void LD_A_n(unsigned short a, unsigned short r2) {
 			cpu->a = read_8_bit(cpu->hl);
 			break;
 		default:
-			cpu->a = *reg_pointers[r2];
+			cpu->a = *reg_pointers[n];
 	}
 }
 
@@ -225,9 +261,12 @@ void POP_nn(unsigned short nn, unsigned short NA) {
 }
 
 // 8 bit ALU
-//when using check whether immediate can be one of the register numbers
-void ADD_A_n(unsigned short a, unsigned short n) {
-	if (n == HL)
+
+void ADD_A_n(unsigned short type, unsigned short n) {
+	// check if n is immediate
+	if (type == READ_8)
+		;
+	else if (n == HL)
 		n = read_8_bit(cpu->hl);
 	else
 		n = *reg_pointers[n];
@@ -252,8 +291,10 @@ void ADD_A_n(unsigned short a, unsigned short n) {
 		clear_flag(HALF_CARRY_FLAG);
 }
 
-void ADC_A_n(unsigned short a, unsigned short n) {
-	if (n == HL)
+void ADC_A_n(unsigned short type, unsigned short n) {
+	if (type == READ_8)
+		;
+	else if (n == HL)
 		n = read_8_bit(cpu->hl);
 	else
 		n = *reg_pointers[n];
@@ -281,8 +322,10 @@ void ADC_A_n(unsigned short a, unsigned short n) {
 
 }
 
-void SUB_n(unsigned short n, unsigned short NA) {
-	if (n == HL)
+void SUB_n(unsigned short type, unsigned short n) {
+	if (type == READ_8)
+		;
+	else if (n == HL)
 		n = read_8_bit(cpu->hl);
 	else
 		n = *reg_pointers[n];
@@ -307,8 +350,10 @@ void SUB_n(unsigned short n, unsigned short NA) {
 		set_flag(ZERO_FLAG);
 }
 
-void SBC_A_n(unsigned short a, unsigned short n) {
-	if (n == HL)
+void SBC_A_n(unsigned short type, unsigned short n) {
+	if (type == READ_8)
+		;
+	else if (n == HL)
 		n = read_8_bit(cpu->hl);
 	else
 		n = *reg_pointers[n];
@@ -335,8 +380,10 @@ void SBC_A_n(unsigned short a, unsigned short n) {
 	cpu->a = cpu->a + n;
 }
 
-void AND_n(unsigned short n, unsigned short NA) {
-	if (n == HL)
+void AND_n(unsigned short type, unsigned short n) {
+	if (type == READ_8)
+		;
+	else if (n == HL)
 		n = read_8_bit(cpu->hl);
 	else
 		n = *reg_pointers[n];
@@ -353,8 +400,10 @@ void AND_n(unsigned short n, unsigned short NA) {
 		set_flag(ZERO_FLAG);
 }
 
-void OR_n(unsigned short n, unsigned short NA) {
-	if (n == HL)
+void OR_n(unsigned short type, unsigned short n) {
+	if (type == READ_8)
+		;
+	else if (n == HL)
 		n = read_8_bit(cpu->hl);
 	else
 		n = *reg_pointers[n];
@@ -533,7 +582,7 @@ void SWAP_n(unsigned short n, unsigned short NA) {
 }
 
 void DAA(unsigned short NA_1, unsigned short NA_2) {
-	unsigned short s = cpu->a;
+	unsigned char s = cpu->a;
 
 	if (cpu->f & SUBTRACT_FLAG) {
 		if (cpu->f & HALF_CARRY_FLAG) s = (s - 0x06) & 0xFF;
@@ -644,7 +693,7 @@ void RRCA(unsigned short A, unsigned short NA) {
 	cpu->a >>= 1;
 	if (carry) cpu->a |= ZERO_FLAG;
 
-	FLAGS_CLEAR(SUBTRACT_FLAG | ZERO_FLAG | HALF_CARRY_FLAG);
+	clear_flag(SUBTRACT_FLAG | ZERO_FLAG | HALF_CARRY_FLAG);
 }
 
 void RRA(unsigned short A, unsigned short NA) {
@@ -675,7 +724,7 @@ void RLC_n(unsigned short n, unsigned short NA) {
 	else
 		clear_flag(CARRY_FLAG);
 
-	num << 1;
+	num <<= 1;
 	num += carry;
 
 	if (num)
@@ -869,12 +918,11 @@ void SRL_n(unsigned short n, unsigned short NA) {
 
 //Needs to be tested (ALL OF THEM)
 void BIT_b_r(unsigned short b, unsigned short r) {
-	unsigned int i;
 	unsigned char bit_test = 1 << b;
 	unsigned int res;
 	
 	if (r == HL) {
-		res = read_8_bit(reg_pointers[HL]) & bit_test;
+		res = read_8_bit(*reg_pointers[HL]) & bit_test;
 	} else {
 		res = *reg_pointers[r] & bit_test;
 	}
@@ -889,7 +937,6 @@ void BIT_b_r(unsigned short b, unsigned short r) {
 }
 
 void SET_b_r(unsigned short b, unsigned short r) {
-	unsigned int i;
 	unsigned char bit_test = 1 << b;
 	unsigned int res;
 
@@ -903,7 +950,6 @@ void SET_b_r(unsigned short b, unsigned short r) {
 }
 
 void RES_b_r(unsigned short b, unsigned short r) {
-	unsigned int i;
 	unsigned char bit_test = ~(1 << b);
 	unsigned int res;
 
@@ -939,6 +985,7 @@ void JP_cc_nn(unsigned short cc, unsigned short nn) {
 			break;
 		default:
 			//Error here
+			;
 	}
 
 	if (jump)
@@ -971,6 +1018,7 @@ void JR_cc_n(unsigned short cc, unsigned short n) {
 		break;
 	default:
 		//Error here
+		;
 	}
 
 	if (jump)
@@ -1003,6 +1051,7 @@ void CALL_cc_nn(unsigned short cc, unsigned short nn) {
 		break;
 	default:
 		//Error here
+		;
 	}
 	CALL_nn(nn, 0);
 }
@@ -1040,6 +1089,7 @@ void RET_cc(unsigned short cc, unsigned short NA) {
 		break;
 	default:
 		//Error here
+		;
 	}
 
 	if (ret)

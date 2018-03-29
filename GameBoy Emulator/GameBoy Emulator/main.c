@@ -1,4 +1,5 @@
 #include "Z80.h"
+#include <stdio.h>
 
 int main() {
 	cpu_init();
