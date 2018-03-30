@@ -64,6 +64,8 @@ int cpu_execute();
 int check_interrupts();
 
 //Function Pointer
+// arg1 = Regval (for most instructions put this NA unless it takes 2 registers)
+// arg2 = Either immediate or Regval
 typedef void (*OPCODE_OPERATION)(unsigned short arg1, unsigned short arg2);
 
 typedef struct {
@@ -176,65 +178,65 @@ static INSTR opcodes[] = {
 	{"NOP", NULL, NULL, NULL},			//0x00
 	{"LD BC, nn", LD_n_nn, BC, READ_16},	//0x01
 	{"LD BC, A", LD_n_A, BC, A},		//0x02
-	{"INC BC", NULL, BC, NULL},		//0x03
-	{"INC B", NULL, B, NULL},			//0x04
-	{"DEC B", NULL, B, NULL},			//0x05
+	{"INC BC", INC_nn, BC, NA},		//0x03
+	{"INC B", INC_n, NA, B},			//0x04
+	{"DEC B", DEC_n, NA, B},			//0x05
 	{"LD B, n", LD_nn_n, B, READ_8},		//0x06
 	{"RLC A", NULL, A, NULL},			//0x07
 	{"LD nn, SP", LD_nn_SP, READ_16, SP},	//0x08
-	{"ADD HL, BC", NULL, HL, BC},	//0x09
+	{"ADD HL, BC", ADD_HL_n, HL, BC},	//0x09
 	{"LD A, BC", LD_A_n, A, BC},		//0x0A
-	{"DEC BC", NULL, BC, NULL},		//0x0B
-	{"INC C", NULL, C, NULL},			//0x0C
-	{"INC D", NULL, D, NULL},			//0x0D
+	{"DEC BC", DEC_nn, BC, NA},		//0x0B
+	{"INC C", INC_n, NA, C},			//0x0C
+	{"DEC C", DEC_n, NA, C},			//0x0D
 	{"LD C, n", LD_nn_n, C, READ_8},		//0x0E
 	{"RRC A", NULL, A, NULL},			//0x0F
 	{"STOP", NULL, NULL, NULL},			//0x10
 	{"LD DE, nn", LD_n_nn, DE, READ_16},	//0x11
 	{"LD DE, A", LD_n_A, DE, A},		//0x12
-	{"INC DE", NULL, DE, NULL},		//0x13
-	{"INC D", NULL, D, NULL},			//0x14
-	{"DEC D", NULL, D, NULL},			//0x15
+	{"INC DE", INC_nn, DE, NA},		//0x13
+	{"INC D", INC_n, NA, D},			//0x14
+	{"DEC D", DEC_n, NA, D},			//0x15
 	{"LD D, n", LD_nn_n, D, READ_8},		//0x16
 	{"RL A", NULL, A, NULL},			//0x17
 	{"JR n", NULL, NULL, NULL},			//0x18
-	{"ADD HL, DE", NULL, HL, DE},	//0x19
+	{"ADD HL, DE", ADD_HL_n, HL, DE},	//0x19
 	{"LD A, DE", LD_A_n, A, DE},		//0x1A
-	{"DEC DE", NULL, DE, NULL},		//0x1B
-	{"INC E", NULL, E, NULL},			//0x1C
-	{"DEC E", NULL, E, NULL},			//0x1D
+	{"DEC DE", DEC_nn, DE, NA},		//0x1B
+	{"INC E", INC_n, NA, E},			//0x1C
+	{"DEC E", DEC_n, NA, E},			//0x1D
 	{"LD E, n", LD_nn_n, E, READ_8},		//0x1E
 	{"RR A", NULL, A, NULL},			//0x1F
 	{"JR NZ, n", NULL, NZ, NULL},		//0x20		//NZ is check for Not zero
 	{"LD HL, nn", LD_n_nn, HL, READ_16},	//0x21
 	{"LDI HL, A", LD_HLI_A, HL, A},		//0x22
-	{"INC HL", NULL, HL, NULL},		//0x23
-	{"INC H", NULL, H, NULL},			//0x24
-	{"DEC H", NULL, H, NULL},			//0x25
+	{"INC HL", INC_nn, HL, NA},		//0x23
+	{"INC H", INC_n, NA, H},			//0x24
+	{"DEC H", DEC_n, NA, H},			//0x25
 	{"LD H, n", LD_nn_n, H, READ_8},		//0x26
-	{"DAA", NULL, NULL, NULL},			//0x27
+	{"DAA", DAA, NA, NA},			//0x27
 	{"JR Z, n", NULL, Z, NULL},		//0x28		//Z is check for zero
-	{"ADD HL, HL", NULL, HL, HL},	//0x29
+	{"ADD HL, HL", ADD_HL_n, HL, HL},	//0x29
 	{"LDI A, HL", LD_A_HLI, A, HL},		//0x2A
-	{"DEC HL", NULL, HL, NULL},		//0x2B
-	{"INC L", NULL, L, NULL},			//0x2C
-	{"DEC L", NULL, L, NULL},			//0x2D
+	{"DEC HL", DEC_nn, HL, NA},		//0x2B
+	{"INC L", INC_n, NA, L},			//0x2C
+	{"DEC L", DEC_n, NA, L},			//0x2D
 	{"LD L, n", LD_nn_n, L, READ_8},		//0x2E
 	{"CPL", NULL, NULL, NULL},			//0x2F
 	{"JR NC, n", NULL, NC, NULL},		//0x30		//NC is check for no carry
 	{"LD SP, nn", LD_n_nn, SP, READ_16},	//0x31
 	{"LDD HL, A", LD_HLD_A, HL, A},		//0x32
-	{"INC SP", NULL, SP, NULL},		//0x33
-	{"INC HL", NULL, HL, NULL},		//0x34
-	{"DEC HL", NULL, HL, NULL},		//0x35
+	{"INC SP", INC_nn, SP, NA},		//0x33
+	{"INC HL", INC_n, NA, HL},		//0x34
+	{"DEC HL", DEC_n, NA, HL},		//0x35
 	{"LD HL, n", LD_r1_r2, HL, READ_8},		//0x36 CHECK IF READ 8
 	{"SCF", NULL, NULL, NULL},			//0x37
 	{"JR C, n", NULL, C, NULL},		//0x38		//C is check for carry
-	{"ADD HL, SP", NULL, HL, SP},	//0x39
+	{"ADD HL, SP", ADD_HL_n, HL, SP},	//0x39
 	{"LDD A, HL", LD_A_HLD, A, HL},		//0x3A
-	{"DEC SP", NULL, SP, NULL},		//0x3B
-	{"INC A", NULL, A, NULL},			//0x3C
-	{"DEC A", NULL, A, NULL},			//0x3D
+	{"DEC SP", DEC_nn, SP, NA},		//0x3B
+	{"INC A", INC_n, NA, A},			//0x3C
+	{"DEC A", DEC_n, NA, A},			//0x3D
 	{"LD A, n", LD_A_imm, A, READ_8},		//0x3E
 	{"CCF", NULL, NULL, NULL},			//0x3F
 	{"LD B, B", LD_r1_r2, B, B},		//0x40
@@ -333,38 +335,38 @@ static INSTR opcodes[] = {
 	{"SBC A, L", SBC_A_n, A, L },		//0x9D
 	{"SBC A, HL", SBC_A_n, A, HL},		//0x9E
 	{"SBC A, A", SBC_A_n, A, A},		//0x9F
-	{"AND B", AND_n, B, NA},		//0xA0
-	{"AND C", AND_n, C, NA},		//0xA1
-	{"AND D", AND_n, D, NA},		//0xA2
-	{"AND E", AND_n, E, NA},		//0xA3
-	{"AND H", AND_n, H, NA},		//0xA4
-	{"AND L", AND_n, L, NA},		//0xA5
-	{"AND HL", AND_n, HL, NA},		//0xA6
-	{"AND A", AND_n, A, NA},		//0xA7
-	{"XOR B", NULL, B, NULL},		//0xA8
-	{"XOR C", NULL, C, NULL},		//0xA9
-	{"XOR D", NULL, D, NULL},		//0xAA
-	{"XOR E", NULL, E, NULL},		//0xAB
-	{"XOR H", NULL, H, NULL},		//0xAC
-	{"XOR L", NULL, L, NULL },		//0xAD
-	{"XOR HL", NULL, HL, NULL},		//0xAE
-	{"XOR A", NULL, A, NULL},		//0xAF
-	{"OR B", OR_n, B, NULL},		//0xB0
-	{"OR C", OR_n, C, NULL},		//0xB1
-	{"OR D", OR_n, D, NULL},		//0xB2
-	{"OR E", OR_n, E, NULL},		//0xB3
-	{"OR H", OR_n, H, NULL},		//0xB4
-	{"OR L", OR_n, L, NULL},		//0xB5
-	{"OR HL", OR_n, HL, NULL},		//0xB6
-	{"OR A", OR_n, A, NA},		//0xB7
-	{"CP B", NULL, B, NULL},		//0xB8
-	{"CP C", NULL, C, NULL},		//0xB9
-	{"CP D", NULL, D, NULL},		//0xBA
-	{"CP E", NULL, E, NULL},		//0xBB
-	{"CP H", NULL, H, NULL},		//0xBC
-	{"CP L", NULL, L, NULL},		//0xBD
-	{"CP HL", NULL, HL, NULL},		//0xBE
-	{"CP A", NULL, A, NULL},		//0xBF
+	{"AND B", AND_n, B, B},		//0xA0
+	{"AND C", AND_n, NA, C},		//0xA1
+	{"AND D", AND_n, NA, D},		//0xA2
+	{"AND E", AND_n, NA, E},		//0xA3
+	{"AND H", AND_n, NA, H},		//0xA4
+	{"AND L", AND_n, NA, L},		//0xA5
+	{"AND HL", AND_n, NA, HL},		//0xA6
+	{"AND A", AND_n, NA, A},		//0xA7
+	{"XOR B", XOR_n, NA, B},		//0xA8
+	{"XOR C", XOR_n, NA, C},		//0xA9
+	{"XOR D", XOR_n, NA, D},		//0xAA
+	{"XOR E", XOR_n, NA, E},		//0xAB
+	{"XOR H", XOR_n, NA, H},		//0xAC
+	{"XOR L", XOR_n, NA, L},		//0xAD
+	{"XOR HL", XOR_n, NA, HL},		//0xAE
+	{"XOR A", XOR_n, NA, A},		//0xAF
+	{"OR B", OR_n, NA, B},		//0xB0
+	{"OR C", OR_n, NA, C},		//0xB1
+	{"OR D", OR_n, NA, D},		//0xB2
+	{"OR E", OR_n, NA, E},		//0xB3
+	{"OR H", OR_n, NA, H},		//0xB4
+	{"OR L", OR_n, NA, L},		//0xB5
+	{"OR HL", OR_n, NA, HL},		//0xB6
+	{"OR A", OR_n, NA, A},		//0xB7
+	{"CP B", CP_n, NA, B},		//0xB8
+	{"CP C", CP_n, NA, C},		//0xB9
+	{"CP D", CP_n, NA, D},		//0xBA
+	{"CP E", CP_n, NA, E},		//0xBB
+	{"CP H", CP_n, NA, H},		//0xBC
+	{"CP L", CP_n, NA, L},		//0xBD
+	{"CP HL", CP_n, NA, HL},		//0xBE
+	{"CP A", CP_n, NA, A},		//0xBF
 	{"RET NZ", NULL, NZ, NULL},		//0xC0		//NZ means check for not zero
 	{"POP BC", POP_nn, BC, NA},		//0xC1
 	{"JP NZ, nn", NULL, NZ, NULL},	//0xC2
@@ -405,13 +407,13 @@ static INSTR opcodes[] = {
 	{"PUSH HL", PUSH_nn, HL, NA},		//0xE5
 	{"AND n", AND_n, READ_8, READ_8},		//0xE6
 	{"RST 20", NULL, "20", NULL},		//0xE7
-	{"ADD SP, d", NULL, SP, NULL},	//0xE8
+	{"ADD SP, n", ADD_SP_n, SP, READ_8},	//0xE8
 	{"JP HL", NULL, HL, NULL},		//0xE9
 	{"LD nn, A", LD_n_A, READ_16, A},		//0xEA
 	{"XX", NULL, NULL, NULL},			//0xEB
 	{"XX", NULL, NULL, NULL},			//0xEC
 	{"XX", NULL, NULL, NULL},			//0xED
-	{"XOR n", NULL, NULL, NULL},		//0xEE
+	{"XOR n", XOR_n, READ_8, READ_8},		//0xEE
 	{"RST 28", NULL, "28", NULL},		//0xEF
 	{"LDH A, n", LDH_A_n, A, READ_8},		//0xF0
 	{"POP AF", POP_nn, AF, NA},		//0xF1
@@ -419,7 +421,7 @@ static INSTR opcodes[] = {
 	{"DI", NULL, NULL, NULL},			//0xF3
 	{"XX", NULL, NULL, NULL},			//0xF4
 	{"PUSH AF", PUSH_nn, AF, NA},		//0xF5
-	{"OR n", NULL, NULL, NULL},			//0xF6
+	{"OR n", OR_n, READ_8, READ_8},			//0xF6
 	{"RST 30", NULL, "30", NULL},		//0xF7
 	{"LDHL SP, n", LDHL_SP_n, SP, READ_8},	//0xF8
 	{"LD SP, HL", LD_SP_HL, SP, HL},	//0xF9
@@ -427,280 +429,280 @@ static INSTR opcodes[] = {
 	{"EI", NULL, NULL, NULL},			//0xFB
 	{"XX", NULL, NULL, NULL},			//0xFC
 	{"XX", NULL, NULL, NULL},			//0xFD
-	{"CP n", NULL, NULL, NULL},			//0xFE
+	{"CP n", CP_n, READ_8, READ_8},			//0xFE
 	{"RST 38", NULL, "28", NULL},		//0xFF
 };
 
 static INSTR opcodesCB[] = {
-	{ "RLC B", NULL, B, NULL },           //CDx00
-	{ "RLC C", NULL, C, NULL },           //CDx01
-	{ "RLC D", NULL, D, NULL },           //CDx02
-	{ "RLC E", NULL, E, NULL },           //CDx03
-	{ "RLC H", NULL, H, NULL },           //CDx04
-	{ "RLC L", NULL, L, NULL },           //CDx05
-	{ "RLC HL", NULL, HL, NULL },         //CDx06
-	{ "RLC A", NULL, A, NULL },           //CDx07
-	{ "RRC B", NULL, B, NULL },           //CDx08
-	{ "RRC C", NULL, C, NULL },           //CDx09
-	{ "RRC D", NULL, D, NULL },           //CDx0A
-	{ "RRC E", NULL, E, NULL },           //CDx0B
-	{ "RRC H", NULL, H, NULL },           //CDx0C
-	{ "RRC L", NULL, L, NULL },           //CDx0D
-	{ "RRC HL", NULL, HL, NULL },         //CDx0E
-	{ "RRC A", NULL, A, NULL },           //CDx0F
+	{ "RLC B", NULL, B, NULL },           //0xCB 00
+	{ "RLC C", NULL, C, NULL },           //0xCB 01
+	{ "RLC D", NULL, D, NULL },           //0xCB 02
+	{ "RLC E", NULL, E, NULL },           //0xCB 03
+	{ "RLC H", NULL, H, NULL },           //0xCB 04
+	{ "RLC L", NULL, L, NULL },           //0xCB 05
+	{ "RLC HL", NULL, HL, NULL },         //0xCB 06
+	{ "RLC A", NULL, A, NULL },           //0xCB 07
+	{ "RRC B", NULL, B, NULL },           //0xCB 08
+	{ "RRC C", NULL, C, NULL },           //0xCB 09
+	{ "RRC D", NULL, D, NULL },           //0xCB 0A
+	{ "RRC E", NULL, E, NULL },           //0xCB 0B
+	{ "RRC H", NULL, H, NULL },           //0xCB 0C
+	{ "RRC L", NULL, L, NULL },           //0xCB 0D
+	{ "RRC HL", NULL, HL, NULL },         //0xCB 0E
+	{ "RRC A", NULL, A, NULL },           //0xCB 0F
 
-	{ "RL B", NULL, B, NULL },            //CDx10
-	{ "RL C", NULL, C, NULL },            //CDx11
-	{ "RL D", NULL, D, NULL },            //CDx12
-	{ "RL E", NULL, E, NULL },            //CDx13
-	{ "RL H", NULL, H, NULL },            //CDx14
-	{ "RL L", NULL, L, NULL },            //CDx15
-	{ "RL HL", NULL, HL, NULL },          //CDx16
-	{ "RL A", NULL, A, NULL },            //CDx17
-	{ "RR B", NULL, B, NULL },            //CDx18
-	{ "RR C", NULL, C, NULL },            //CDx19
-	{ "RR D", NULL, D, NULL },            //CDx1A
-	{ "RR E", NULL, E, NULL },            //CDx1B
-	{ "RR H", NULL, H, NULL },            //CDx1C
-	{ "RR L", NULL, L, NULL },            //CDx1D
-	{ "RR HL", NULL, HL, NULL },          //CDx1E
-	{ "RR A", NULL, A, NULL },            //CDx1F
+	{ "RL B", NULL, B, NULL },            //0xCB 10
+	{ "RL C", NULL, C, NULL },            //0xCB 11
+	{ "RL D", NULL, D, NULL },            //0xCB 12
+	{ "RL E", NULL, E, NULL },            //0xCB 13
+	{ "RL H", NULL, H, NULL },            //0xCB 14
+	{ "RL L", NULL, L, NULL },            //0xCB 15
+	{ "RL HL", NULL, HL, NULL },          //0xCB 16
+	{ "RL A", NULL, A, NULL },            //0xCB 17
+	{ "RR B", NULL, B, NULL },            //0xCB 18
+	{ "RR C", NULL, C, NULL },            //0xCB 19
+	{ "RR D", NULL, D, NULL },            //0xCB 1A
+	{ "RR E", NULL, E, NULL },            //0xCB 1B
+	{ "RR H", NULL, H, NULL },            //0xCB 1C
+	{ "RR L", NULL, L, NULL },            //0xCB 1D
+	{ "RR HL", NULL, HL, NULL },          //0xCB 1E
+	{ "RR A", NULL, A, NULL },            //0xCB 1F
 
-	{ "SLA B", NULL, B, NULL },           //CDx20
-	{ "SLA C", NULL, C, NULL },           //CDx21
-	{ "SLA D", NULL, D, NULL },           //CDx22
-	{ "SLA E", NULL, E, NULL },           //CDx23
-	{ "SLA H", NULL, H, NULL },           //CDx24
-	{ "SLA L", NULL, L, NULL },           //CDx25
-	{ "SLA HL", NULL, HL, NULL },         //CDx26
-	{ "SLA A", NULL, A, NULL },           //CDx27
-	{ "SRA B", NULL, B, NULL },           //CDx28
-	{ "SRA C", NULL, C, NULL },           //CDx29
-	{ "SRA D", NULL, D, NULL },           //CDx2A
-	{ "SRA E", NULL, E, NULL },           //CDx2B
-	{ "SRA H", NULL, H, NULL },           //CDx2C
-	{ "SRA L", NULL, L, NULL },           //CDx2D
-	{ "SRA HL", NULL, HL, NULL },         //CDx2E
-	{ "SRA A", NULL, A, NULL },           //CDx2F
+	{ "SLA B", NULL, B, NULL },           //0xCB 20
+	{ "SLA C", NULL, C, NULL },           //0xCB 21
+	{ "SLA D", NULL, D, NULL },           //0xCB 22
+	{ "SLA E", NULL, E, NULL },           //0xCB 23
+	{ "SLA H", NULL, H, NULL },           //0xCB 24
+	{ "SLA L", NULL, L, NULL },           //0xCB 25
+	{ "SLA HL", NULL, HL, NULL },         //0xCB 26
+	{ "SLA A", NULL, A, NULL },           //0xCB 27
+	{ "SRA B", NULL, B, NULL },           //0xCB 28
+	{ "SRA C", NULL, C, NULL },           //0xCB 29
+	{ "SRA D", NULL, D, NULL },           //0xCB 2A
+	{ "SRA E", NULL, E, NULL },           //0xCB 2B
+	{ "SRA H", NULL, H, NULL },           //0xCB 2C
+	{ "SRA L", NULL, L, NULL },           //0xCB 2D
+	{ "SRA HL", NULL, HL, NULL },         //0xCB 2E
+	{ "SRA A", NULL, A, NULL },           //0xCB 2F
 
-	{ "SWAP B", NULL, B, NULL },          //CDx30
-	{ "SWAP C", NULL, C, NULL },          //CDx31
-	{ "SWAP D", NULL, D, NULL },          //CDx32
-	{ "SWAP E", NULL, E, NULL },          //CDx33
-	{ "SWAP H", NULL, H, NULL },          //CDx34
-	{ "SWAP L", NULL, L, NULL },          //CDx35
-	{ "SWAP HL", NULL, HL, NULL },        //CDx36
-	{ "SWAP A", NULL, A, NULL },          //CDx37
-	{ "SRL B", NULL, B, NULL },           //CDx38
-	{ "SRL C", NULL, C, NULL },           //CDx39
-	{ "SRL D", NULL, D, NULL },           //CDx3A
-	{ "SRL E", NULL, E, NULL },           //CDx3B
-	{ "SRL H", NULL, H, NULL },           //CDx3C
-	{ "SRL L", NULL, L, NULL },           //CDx3D
-	{ "SRL HL", NULL, HL, NULL },         //CDx3E
-	{ "SRL A", NULL, A, NULL },           //CDx3F
+	{ "SWAP B", SWAP_n, B, NA },          //0xCB 30
+	{ "SWAP C", SWAP_n, C, NA },          //0xCB 31
+	{ "SWAP D", SWAP_n, D, NA },          //0xCB 32
+	{ "SWAP E", SWAP_n, E, NA },          //0xCB 33
+	{ "SWAP H", SWAP_n, H, NA },          //0xCB 34
+	{ "SWAP L", SWAP_n, L, NA },          //0xCB 35
+	{ "SWAP HL", SWAP_n, HL, NA },        //0xCB 36
+	{ "SWAP A", SWAP_n, A, NA },          //0xCB 37
+	{ "SRL B", NULL, B, NULL },           //0xCB 38
+	{ "SRL C", NULL, C, NULL },           //0xCB 39
+	{ "SRL D", NULL, D, NULL },           //0xCB 3A
+	{ "SRL E", NULL, E, NULL },           //0xCB 3B
+	{ "SRL H", NULL, H, NULL },           //0xCB 3C
+	{ "SRL L", NULL, L, NULL },           //0xCB 3D
+	{ "SRL HL", NULL, HL, NULL },         //0xCB 3E
+	{ "SRL A", NULL, A, NULL },           //0xCB 3F
 
-	{ "BIT 0 B", NULL, 0, B },            //CDx40
-	{ "BIT 0 C", NULL, 0, C },            //CDx41
-	{ "BIT 0 D", NULL, 0, D },            //CDx42
-	{ "BIT 0 E", NULL, 0, E },            //CDx43
-	{ "BIT 0 H", NULL, 0, H },            //CDx44
-	{ "BIT 0 L", NULL, 0, L },            //CDx45
-	{ "BIT 0 HL", NULL, 0, HL },          //CDx46
-	{ "BIT 0 A", NULL, 0, A },            //CDx47
-	{ "BIT 1 B", NULL, 1, B },            //CDx48
-	{ "BIT 1 C", NULL, 1, C },            //CDx49
-	{ "BIT 1 D", NULL, 1, D },            //CDx4A
-	{ "BIT 1 E", NULL, 1, E },            //CDx4B
-	{ "BIT 1 H", NULL, 1, H },            //CDx4C
-	{ "BIT 1 L", NULL, 1, L },            //CDx4D
-	{ "BIT 1 HL", NULL, 1, HL },          //CDx4E
-	{ "BIT 1 A", NULL, 1, A },            //CDx4F
+	{ "BIT 0 B", NULL, 0, B },            //0xCB 40
+	{ "BIT 0 C", NULL, 0, C },            //0xCB 41
+	{ "BIT 0 D", NULL, 0, D },            //0xCB 42
+	{ "BIT 0 E", NULL, 0, E },            //0xCB 43
+	{ "BIT 0 H", NULL, 0, H },            //0xCB 44
+	{ "BIT 0 L", NULL, 0, L },            //0xCB 45
+	{ "BIT 0 HL", NULL, 0, HL },          //0xCB 46
+	{ "BIT 0 A", NULL, 0, A },            //0xCB 47
+	{ "BIT 1 B", NULL, 1, B },            //0xCB 48
+	{ "BIT 1 C", NULL, 1, C },            //0xCB 49
+	{ "BIT 1 D", NULL, 1, D },            //0xCB 4A
+	{ "BIT 1 E", NULL, 1, E },            //0xCB 4B
+	{ "BIT 1 H", NULL, 1, H },            //0xCB 4C
+	{ "BIT 1 L", NULL, 1, L },            //0xCB 4D
+	{ "BIT 1 HL", NULL, 1, HL },          //0xCB 4E
+	{ "BIT 1 A", NULL, 1, A },            //0xCB 4F
 
-	{ "BIT 2 B", NULL, 2, B },            //CDx50
-	{ "BIT 2 C", NULL, 2, C },            //CDx51
-	{ "BIT 2 D", NULL, 2, D },            //CDx52
-	{ "BIT 2 E", NULL, 2, E },            //CDx53
-	{ "BIT 2 H", NULL, 2, H },            //CDx54
-	{ "BIT 2 L", NULL, 2, L },            //CDx55
-	{ "BIT 2 HL", NULL, 2, HL },          //CDx56
-	{ "BIT 2 A", NULL, 2, A },            //CDx57
-	{ "BIT 3 B", NULL, 3, B },            //CDx58
-	{ "BIT 3 C", NULL, 3, C },            //CDx59
-	{ "BIT 3 D", NULL, 3, D },            //CDx5A
-	{ "BIT 3 E", NULL, 3, E },            //CDx5B
-	{ "BIT 3 H", NULL, 3, H },            //CDx5C
-	{ "BIT 3 L", NULL, 3, L },            //CDx5D
-	{ "BIT 3 HL", NULL, 3, HL },          //CDx5E
-	{ "BIT 3 A", NULL, 3, A },            //CDx5F
+	{ "BIT 2 B", NULL, 2, B },            //0xCB 50
+	{ "BIT 2 C", NULL, 2, C },            //0xCB 51
+	{ "BIT 2 D", NULL, 2, D },            //0xCB 52
+	{ "BIT 2 E", NULL, 2, E },            //0xCB 53
+	{ "BIT 2 H", NULL, 2, H },            //0xCB 54
+	{ "BIT 2 L", NULL, 2, L },            //0xCB 55
+	{ "BIT 2 HL", NULL, 2, HL },          //0xCB 56
+	{ "BIT 2 A", NULL, 2, A },            //0xCB 57
+	{ "BIT 3 B", NULL, 3, B },            //0xCB 58
+	{ "BIT 3 C", NULL, 3, C },            //0xCB 59
+	{ "BIT 3 D", NULL, 3, D },            //0xCB 5A
+	{ "BIT 3 E", NULL, 3, E },            //0xCB 5B
+	{ "BIT 3 H", NULL, 3, H },            //0xCB 5C
+	{ "BIT 3 L", NULL, 3, L },            //0xCB 5D
+	{ "BIT 3 HL", NULL, 3, HL },          //0xCB 5E
+	{ "BIT 3 A", NULL, 3, A },            //0xCB 5F
 
-	{ "BIT 4 B", NULL, 4, B },            //CDx60
-	{ "BIT 4 C", NULL, 4, C },            //CDx61
-	{ "BIT 4 D", NULL, 4, D },            //CDx62
-	{ "BIT 4 E", NULL, 4, E },            //CDx63
-	{ "BIT 4 H", NULL, 4, H },            //CDx64
-	{ "BIT 4 L", NULL, 4, L },            //CDx65
-	{ "BIT 4 HL", NULL, 4, HL },          //CDx66
-	{ "BIT 4 A", NULL, 4, A },            //CDx67
-	{ "BIT 5 B", NULL, 5, B },            //CDx68
-	{ "BIT 5 C", NULL, 5, C },            //CDx69
-	{ "BIT 5 D", NULL, 5, D },            //CDx6A
-	{ "BIT 5 E", NULL, 5, E },            //CDx6B
-	{ "BIT 5 H", NULL, 5, H },            //CDx6C
-	{ "BIT 5 L", NULL, 5, L },            //CDx6D
-	{ "BIT 5 HL", NULL, 5, HL },          //CDx6E
-	{ "BIT 5 A", NULL, 5, A },            //CDx6F
+	{ "BIT 4 B", NULL, 4, B },            //0xCB 60
+	{ "BIT 4 C", NULL, 4, C },            //0xCB 61
+	{ "BIT 4 D", NULL, 4, D },            //0xCB 62
+	{ "BIT 4 E", NULL, 4, E },            //0xCB 63
+	{ "BIT 4 H", NULL, 4, H },            //0xCB 64
+	{ "BIT 4 L", NULL, 4, L },            //0xCB 65
+	{ "BIT 4 HL", NULL, 4, HL },          //0xCB 66
+	{ "BIT 4 A", NULL, 4, A },            //0xCB 67
+	{ "BIT 5 B", NULL, 5, B },            //0xCB 68
+	{ "BIT 5 C", NULL, 5, C },            //0xCB 69
+	{ "BIT 5 D", NULL, 5, D },            //0xCB 6A
+	{ "BIT 5 E", NULL, 5, E },            //0xCB 6B
+	{ "BIT 5 H", NULL, 5, H },            //0xCB 6C
+	{ "BIT 5 L", NULL, 5, L },            //0xCB 6D
+	{ "BIT 5 HL", NULL, 5, HL },          //0xCB 6E
+	{ "BIT 5 A", NULL, 5, A },            //0xCB 6F
 
-	{ "BIT 6 B", NULL, 6, B },            //CDx70
-	{ "BIT 6 C", NULL, 6, C },            //CDx71
-	{ "BIT 6 D", NULL, 6, D },            //CDx72
-	{ "BIT 6 E", NULL, 6, E },            //CDx73
-	{ "BIT 6 H", NULL, 6, H },            //CDx74
-	{ "BIT 6 L", NULL, 6, L },            //CDx75
-	{ "BIT 6 HL", NULL, 6, HL },          //CDx76
-	{ "BIT 6 A", NULL, 6, A },            //CDx77
-	{ "BIT 7 B", NULL, 7, B },            //CDx78
-	{ "BIT 7 C", NULL, 7, C },            //CDx79
-	{ "BIT 7 D", NULL, 7, D },            //CDx7A
-	{ "BIT 7 E", NULL, 7, E },            //CDx7B
-	{ "BIT 7 H", NULL, 7, H },            //CDx7C
-	{ "BIT 7 L", NULL, 7, L },            //CDx7D
-	{ "BIT 7 HL", NULL, 7, HL },          //CDx7E
-	{ "BIT 7 A", NULL, 7, A },            //CDx7F
+	{ "BIT 6 B", NULL, 6, B },            //0xCB 70
+	{ "BIT 6 C", NULL, 6, C },            //0xCB 71
+	{ "BIT 6 D", NULL, 6, D },            //0xCB 72
+	{ "BIT 6 E", NULL, 6, E },            //0xCB 73
+	{ "BIT 6 H", NULL, 6, H },            //0xCB 74
+	{ "BIT 6 L", NULL, 6, L },            //0xCB 75
+	{ "BIT 6 HL", NULL, 6, HL },          //0xCB 76
+	{ "BIT 6 A", NULL, 6, A },            //0xCB 77
+	{ "BIT 7 B", NULL, 7, B },            //0xCB 78
+	{ "BIT 7 C", NULL, 7, C },            //0xCB 79
+	{ "BIT 7 D", NULL, 7, D },            //0xCB 7A
+	{ "BIT 7 E", NULL, 7, E },            //0xCB 7B
+	{ "BIT 7 H", NULL, 7, H },            //0xCB 7C
+	{ "BIT 7 L", NULL, 7, L },            //0xCB 7D
+	{ "BIT 7 HL", NULL, 7, HL },          //0xCB 7E
+	{ "BIT 7 A", NULL, 7, A },            //0xCB 7F
 
-	{ "RES 0 B", NULL, 0, B },            //CDx80
-	{ "RES 0 C", NULL, 0, C },            //CDx81
-	{ "RES 0 D", NULL, 0, D },            //CDx82
-	{ "RES 0 E", NULL, 0, E },            //CDx83
-	{ "RES 0 H", NULL, 0, H },            //CDx84
-	{ "RES 0 L", NULL, 0, L },            //CDx85
-	{ "RES 0 HL", NULL, 0, HL },          //CDx86
-	{ "RES 0 A", NULL, 0, A },            //CDx87
-	{ "RES 1 B", NULL, 1, B },            //CDx88
-	{ "RES 1 C", NULL, 1, C },            //CDx89
-	{ "RES 1 D", NULL, 1, D },            //CDx8A
-	{ "RES 1 E", NULL, 1, E },            //CDx8B
-	{ "RES 1 H", NULL, 1, H },            //CDx8C
-	{ "RES 1 L", NULL, 1, L },            //CDx8D
-	{ "RES 1 HL", NULL, 1, HL },          //CDx8E
-	{ "RES 1 A", NULL, 1, A },            //CDx8F
+	{ "RES 0 B", NULL, 0, B },            //0xCB 80
+	{ "RES 0 C", NULL, 0, C },            //0xCB 81
+	{ "RES 0 D", NULL, 0, D },            //0xCB 82
+	{ "RES 0 E", NULL, 0, E },            //0xCB 83
+	{ "RES 0 H", NULL, 0, H },            //0xCB 84
+	{ "RES 0 L", NULL, 0, L },            //0xCB 85
+	{ "RES 0 HL", NULL, 0, HL },          //0xCB 86
+	{ "RES 0 A", NULL, 0, A },            //0xCB 87
+	{ "RES 1 B", NULL, 1, B },            //0xCB 88
+	{ "RES 1 C", NULL, 1, C },            //0xCB 89
+	{ "RES 1 D", NULL, 1, D },            //0xCB 8A
+	{ "RES 1 E", NULL, 1, E },            //0xCB 8B
+	{ "RES 1 H", NULL, 1, H },            //0xCB 8C
+	{ "RES 1 L", NULL, 1, L },            //0xCB 8D
+	{ "RES 1 HL", NULL, 1, HL },          //0xCB 8E
+	{ "RES 1 A", NULL, 1, A },            //0xCB 8F
 
-	{ "RES 2 B", NULL, 2, B },            //CDx90
-	{ "RES 2 C", NULL, 2, C },            //CDx91
-	{ "RES 2 D", NULL, 2, D },            //CDx92
-	{ "RES 2 E", NULL, 2, E },            //CDx93
-	{ "RES 2 H", NULL, 2, H },            //CDx94
-	{ "RES 2 L", NULL, 2, L },            //CDx95
-	{ "RES 2 HL", NULL, 2, HL },          //CDx96
-	{ "RES 2 A", NULL, 2, A },            //CDx97
-	{ "RES 3 B", NULL, 3, B },            //CDx98
-	{ "RES 3 C", NULL, 3, C },            //CDx99
-	{ "RES 3 D", NULL, 3, D },            //CDx9A
-	{ "RES 3 E", NULL, 3, E },            //CDx9B
-	{ "RES 3 H", NULL, 3, H },            //CDx9C
-	{ "RES 3 L", NULL, 3, L },            //CDx9D
-	{ "RES 3 HL", NULL, 3, HL },          //CDx9E
-	{ "RES 3 A", NULL, 3, A },            //CDx9F
+	{ "RES 2 B", NULL, 2, B },            //0xCB 90
+	{ "RES 2 C", NULL, 2, C },            //0xCB 91
+	{ "RES 2 D", NULL, 2, D },            //0xCB 92
+	{ "RES 2 E", NULL, 2, E },            //0xCB 93
+	{ "RES 2 H", NULL, 2, H },            //0xCB 94
+	{ "RES 2 L", NULL, 2, L },            //0xCB 95
+	{ "RES 2 HL", NULL, 2, HL },          //0xCB 96
+	{ "RES 2 A", NULL, 2, A },            //0xCB 97
+	{ "RES 3 B", NULL, 3, B },            //0xCB 98
+	{ "RES 3 C", NULL, 3, C },            //0xCB 99
+	{ "RES 3 D", NULL, 3, D },            //0xCB 9A
+	{ "RES 3 E", NULL, 3, E },            //0xCB 9B
+	{ "RES 3 H", NULL, 3, H },            //0xCB 9C
+	{ "RES 3 L", NULL, 3, L },            //0xCB 9D
+	{ "RES 3 HL", NULL, 3, HL },          //0xCB 9E
+	{ "RES 3 A", NULL, 3, A },            //0xCB 9F
 
-	{ "RES 4 B", NULL, 4, B },			//CDxA0
-	{ "RES 4 C", NULL, 4, C },			//CDxA1
-	{ "RES 4 D", NULL, 4, D },			//CDxA2
-	{ "RES 4 E", NULL, 4, E },			//CDxA3
-	{ "RES 4 H", NULL, 4, H },			//CDxA4
-	{ "RES 4 L", NULL, 4, L },			//CDxA5
-	{ "RES 4 HL", NULL, 4, HL },			//CDxA6
-	{ "RES 4 A", NULL, 4, A },			//CDxA7
-	{ "RES 5 B", NULL, 5, B },			//CDxA8
-	{ "RES 5 C", NULL, 5, C },			//CDxA9
-	{ "RES 5 D", NULL, 5, D },			//CDxAA
-	{ "RES 5 E", NULL, 5, E },			//CDxAB
-	{ "RES 5 H", NULL, 5, H },			//CDxAC
-	{ "RES 5 L", NULL, 5, L },			//CDxAD
-	{ "RES 5 HL", NULL, 5, HL },			//CDxAE
-	{ "RES 5 A", NULL, 5, A },			//CDxAF
+	{ "RES 4 B", NULL, 4, B },			//0xCB A0
+	{ "RES 4 C", NULL, 4, C },			//0xCB A1
+	{ "RES 4 D", NULL, 4, D },			//0xCB A2
+	{ "RES 4 E", NULL, 4, E },			//0xCB A3
+	{ "RES 4 H", NULL, 4, H },			//0xCB A4
+	{ "RES 4 L", NULL, 4, L },			//0xCB A5
+	{ "RES 4 HL", NULL, 4, HL },			//0xCB A6
+	{ "RES 4 A", NULL, 4, A },			//0xCB A7
+	{ "RES 5 B", NULL, 5, B },			//0xCB A8
+	{ "RES 5 C", NULL, 5, C },			//0xCB A9
+	{ "RES 5 D", NULL, 5, D },			//0xCB AA
+	{ "RES 5 E", NULL, 5, E },			//0xCB AB
+	{ "RES 5 H", NULL, 5, H },			//0xCB AC
+	{ "RES 5 L", NULL, 5, L },			//0xCB AD
+	{ "RES 5 HL", NULL, 5, HL },			//0xCB AE
+	{ "RES 5 A", NULL, 5, A },			//0xCB AF
 
-	{ "RES 6 B", NULL, 6, B },			//CDxB0
-	{ "RES 6 C", NULL, 6, C },			//CDxB1
-	{ "RES 6 D", NULL, 6, D },			//CDxB2
-	{ "RES 6 E", NULL, 6, E },			//CDxB3
-	{ "RES 6 H", NULL, 6, H },			//CDxB4
-	{ "RES 6 L", NULL, 6, L },			//CDxB5
-	{ "RES 6 HL", NULL, 6, HL },			//CDxB6
-	{ "RES 6 A", NULL, 6, A },			//CDxB7
-	{ "RES 7 B", NULL, 7, B },			//CDxB8
-	{ "RES 7 C", NULL, 7, C },			//CDxB9
-	{ "RES 7 D", NULL, 7, D },			//CDxBA
-	{ "RES 7 E", NULL, 7, E },			//CDxBB
-	{ "RES 7 H", NULL, 7, H },			//CDxBC
-	{ "RES 7 L", NULL, 7, L },			//CDxBD
-	{ "RES 7 HL", NULL, 7, HL },			//CDxBE
-	{ "RES 7 A", NULL, 7, A },			//CDxBF
+	{ "RES 6 B", NULL, 6, B },			//0xCB B0
+	{ "RES 6 C", NULL, 6, C },			//0xCB B1
+	{ "RES 6 D", NULL, 6, D },			//0xCB B2
+	{ "RES 6 E", NULL, 6, E },			//0xCB B3
+	{ "RES 6 H", NULL, 6, H },			//0xCB B4
+	{ "RES 6 L", NULL, 6, L },			//0xCB B5
+	{ "RES 6 HL", NULL, 6, HL },			//0xCB B6
+	{ "RES 6 A", NULL, 6, A },			//0xCB B7
+	{ "RES 7 B", NULL, 7, B },			//0xCB B8
+	{ "RES 7 C", NULL, 7, C },			//0xCB B9
+	{ "RES 7 D", NULL, 7, D },			//0xCB BA
+	{ "RES 7 E", NULL, 7, E },			//0xCB BB
+	{ "RES 7 H", NULL, 7, H },			//0xCB BC
+	{ "RES 7 L", NULL, 7, L },			//0xCB BD
+	{ "RES 7 HL", NULL, 7, HL },			//0xCB BE
+	{ "RES 7 A", NULL, 7, A },			//0xCB BF
 
-	{ "SET 0 B", NULL, 0, B },			//CDxC0
-	{ "SET 0 C", NULL, 0, C },			//CDxC1
-	{ "SET 0 D", NULL, 0, D },			//CDxC2
-	{ "SET 0 E", NULL, 0, E },			//CDxC3
-	{ "SET 0 H", NULL, 0, H },			//CDxC4
-	{ "SET 0 L", NULL, 0, L },			//CDxC5
-	{ "SET 0 HL", NULL, 0, HL },			//CDxC6
-	{ "SET 0 A", NULL, 0, A },			//CDxC7
-	{ "SET 1 B", NULL, 1, B },			//CDxC8
-	{ "SET 1 C", NULL, 1, C },			//CDxC9
-	{ "SET 1 D", NULL, 1, D },			//CDxCA
-	{ "SET 1 E", NULL, 1, E },			//CDxCB
-	{ "SET 1 H", NULL, 1, H },			//CDxCC
-	{ "SET 1 L", NULL, 1, L },			//CDxCD
-	{ "SET 1 HL", NULL, 1, HL },			//CDxCE
-	{ "SET 1 A", NULL, 1, A },			//CDxCF
+	{ "SET 0 B", NULL, 0, B },			//0xCB C0
+	{ "SET 0 C", NULL, 0, C },			//0xCB C1
+	{ "SET 0 D", NULL, 0, D },			//0xCB C2
+	{ "SET 0 E", NULL, 0, E },			//0xCB C3
+	{ "SET 0 H", NULL, 0, H },			//0xCB C4
+	{ "SET 0 L", NULL, 0, L },			//0xCB C5
+	{ "SET 0 HL", NULL, 0, HL },			//0xCB C6
+	{ "SET 0 A", NULL, 0, A },			//0xCB C7
+	{ "SET 1 B", NULL, 1, B },			//0xCB C8
+	{ "SET 1 C", NULL, 1, C },			//0xCB C9
+	{ "SET 1 D", NULL, 1, D },			//0xCB CA
+	{ "SET 1 E", NULL, 1, E },			//0xCB CB
+	{ "SET 1 H", NULL, 1, H },			//0xCB CC
+	{ "SET 1 L", NULL, 1, L },			//0xCB CD
+	{ "SET 1 HL", NULL, 1, HL },			//0xCB CE
+	{ "SET 1 A", NULL, 1, A },			//0xCB CF
 
-	{ "SET 2 B", NULL, 2, B },            //CDxD0
-	{ "SET 2 C", NULL, 2, C },            //CDxD1
-	{ "SET 2 D", NULL, 2, D },            //CDxD2
-	{ "SET 2 E", NULL, 2, E },            //CDxD3
-	{ "SET 2 H", NULL, 2, H },            //CDxD4
-	{ "SET 2 L", NULL, 2, L },            //CDxD5
-	{ "SET 2 HL", NULL, 2, HL },          //CDxD6
-	{ "SET 2 A", NULL, 2, A },            //CDxD7
-	{ "SET 3 B", NULL, 3, B },            //CDxD8
-	{ "SET 3 C", NULL, 3, C },            //CDxD9
-	{ "SET 3 D", NULL, 3, D },            //CDxDA
-	{ "SET 3 E", NULL, 3, E },            //CDxDB
-	{ "SET 3 H", NULL, 3, H },            //CDxDC
-	{ "SET 3 L", NULL, 3, L },            //CDxDD
-	{ "SET 3 HL", NULL, 3, HL },          //CDxDE
-	{ "SET 3 A", NULL, 3, A },            //CDxDF
+	{ "SET 2 B", NULL, 2, B },            //0xCB D0
+	{ "SET 2 C", NULL, 2, C },            //0xCB D1
+	{ "SET 2 D", NULL, 2, D },            //0xCB D2
+	{ "SET 2 E", NULL, 2, E },            //0xCB D3
+	{ "SET 2 H", NULL, 2, H },            //0xCB D4
+	{ "SET 2 L", NULL, 2, L },            //0xCB D5
+	{ "SET 2 HL", NULL, 2, HL },          //0xCB D6
+	{ "SET 2 A", NULL, 2, A },            //0xCB D7
+	{ "SET 3 B", NULL, 3, B },            //0xCB D8
+	{ "SET 3 C", NULL, 3, C },            //0xCB D9
+	{ "SET 3 D", NULL, 3, D },            //0xCB DA
+	{ "SET 3 E", NULL, 3, E },            //0xCB DB
+	{ "SET 3 H", NULL, 3, H },            //0xCB DC
+	{ "SET 3 L", NULL, 3, L },            //0xCB DD
+	{ "SET 3 HL", NULL, 3, HL },          //0xCB DE
+	{ "SET 3 A", NULL, 3, A },            //0xCB DF
 
-	{ "SET 4 B", NULL, 4, B },            //CDxE0
-	{ "SET 4 C", NULL, 4, C },            //CDxE1
-	{ "SET 4 D", NULL, 4, D },            //CDxE2
-	{ "SET 4 E", NULL, 4, E },            //CDxE3
-	{ "SET 4 H", NULL, 4, H },            //CDxE4
-	{ "SET 4 L", NULL, 4, L },            //CDxE5
-	{ "SET 4 HL", NULL, 4, HL },          //CDxE6
-	{ "SET 4 A", NULL, 4, A },            //CDxE7
-	{ "SET 5 B", NULL, 5, B },            //CDxE8
-	{ "SET 5 C", NULL, 5, C },            //CDxE9
-	{ "SET 5 D", NULL, 5, D },            //CDxEA
-	{ "SET 5 E", NULL, 5, E },            //CDxEB
-	{ "SET 5 H", NULL, 5, H },            //CDxEC
-	{ "SET 5 L", NULL, 5, L },            //CDxED
-	{ "SET 5 HL", NULL, 5, HL },          //CDxEE
-	{ "SET 5 A", NULL, 5, A },            //CDxEF
+	{ "SET 4 B", NULL, 4, B },            //0xCB E0
+	{ "SET 4 C", NULL, 4, C },            //0xCB E1
+	{ "SET 4 D", NULL, 4, D },            //0xCB E2
+	{ "SET 4 E", NULL, 4, E },            //0xCB E3
+	{ "SET 4 H", NULL, 4, H },            //0xCB E4
+	{ "SET 4 L", NULL, 4, L },            //0xCB E5
+	{ "SET 4 HL", NULL, 4, HL },          //0xCB E6
+	{ "SET 4 A", NULL, 4, A },            //0xCB E7
+	{ "SET 5 B", NULL, 5, B },            //0xCB E8
+	{ "SET 5 C", NULL, 5, C },            //0xCB E9
+	{ "SET 5 D", NULL, 5, D },            //0xCB EA
+	{ "SET 5 E", NULL, 5, E },            //0xCB EB
+	{ "SET 5 H", NULL, 5, H },            //0xCB EC
+	{ "SET 5 L", NULL, 5, L },            //0xCB ED
+	{ "SET 5 HL", NULL, 5, HL },          //0xCB EE
+	{ "SET 5 A", NULL, 5, A },            //0xCB EF
 
-	{ "SET 6 B", NULL, 6, B },            //CDxF0
-	{ "SET 6 C", NULL, 6, C },            //CDxF1
-	{ "SET 6 D", NULL, 6, D },            //CDxF2
-	{ "SET 6 E", NULL, 6, E },            //CDxF3
-	{ "SET 6 H", NULL, 6, H },            //CDxF4
-	{ "SET 6 L", NULL, 6, L },            //CDxF5
-	{ "SET 6 HL", NULL, 6, HL },          //CDxF6
-	{ "SET 6 A", NULL, 6, A },            //CDxF7
-	{ "SET 7 B", NULL, 7, B },            //CDxF8
-	{ "SET 7 C", NULL, 7, C },            //CDxF9
-	{ "SET 7 D", NULL, 7, D },            //CDxFA
-	{ "SET 7 E", NULL, 7, E },            //CDxFB
-	{ "SET 7 H", NULL, 7, H },            //CDxFC
-	{ "SET 7 L", NULL, 7, L },            //CDxFD
-	{ "SET 7 HL", NULL, 7, HL },          //CDxFE
-	{ "SET 7 A", NULL, 7, A },            //CDxFF
+	{ "SET 6 B", NULL, 6, B },            //0xCB F0
+	{ "SET 6 C", NULL, 6, C },            //0xCB F1
+	{ "SET 6 D", NULL, 6, D },            //0xCB F2
+	{ "SET 6 E", NULL, 6, E },            //0xCB F3
+	{ "SET 6 H", NULL, 6, H },            //0xCB F4
+	{ "SET 6 L", NULL, 6, L },            //0xCB F5
+	{ "SET 6 HL", NULL, 6, HL },          //0xCB F6
+	{ "SET 6 A", NULL, 6, A },            //0xCB F7
+	{ "SET 7 B", NULL, 7, B },            //0xCB F8
+	{ "SET 7 C", NULL, 7, C },            //0xCB F9
+	{ "SET 7 D", NULL, 7, D },            //0xCB FA
+	{ "SET 7 E", NULL, 7, E },            //0xCB FB
+	{ "SET 7 H", NULL, 7, H },            //0xCB FC
+	{ "SET 7 L", NULL, 7, L },            //0xCB FD
+	{ "SET 7 HL", NULL, 7, HL },          //0xCB FE
+	{ "SET 7 A", NULL, 7, A },            //0xCB FF
 };
