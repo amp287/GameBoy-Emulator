@@ -237,7 +237,7 @@ void LDHL_SP_n(unsigned short sp, unsigned short n) {
 	cpu->hl = (unsigned short)(result & 0xffff);
 }
 
-void LD_nn_SP(unsigned short nn, unsigned short sp) {
+void LD_nn_SP(unsigned short sp, unsigned short nn) {
 	write_16_bit(nn, cpu->sp);
 }
 
@@ -993,7 +993,7 @@ void RES_b_r(unsigned short b, unsigned short r) {
 }
 
 //Jumps
-void JP_nn(unsigned short nn) {
+void JP_nn(unsigned short NA, unsigned short nn) {
 	cpu->pc = nn;
 }
 
@@ -1026,7 +1026,7 @@ void JP_HL(unsigned short NA_1, unsigned short NA_2) {
 	cpu->pc = cpu->hl;
 }
 
-void JR_n(unsigned short n, unsigned short NA_1) {
+void JR_n(unsigned short NA, unsigned short n) {
 	cpu->pc += (signed char)n;
 }
 
@@ -1057,7 +1057,7 @@ void JR_cc_n(unsigned short cc, unsigned short n) {
 
 //Calls
 
-void CALL_nn(unsigned short nn, unsigned short NA) {
+void CALL_nn(unsigned short NA, unsigned short nn) {
 	cpu->sp -= 2;
 	write_16_bit(cpu->sp, cpu->pc); // Put next instruction on stack
 	cpu->pc = nn;
