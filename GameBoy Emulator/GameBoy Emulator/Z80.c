@@ -26,14 +26,33 @@ void cpu_init() {
 	reg_pointers[4] = &cpu->e;
 	reg_pointers[5] = &cpu->h;
 	reg_pointers[6] = &cpu->l;
-	reg_pointers[7] = &cpu->af;
-	reg_pointers[8] = &cpu->bc;
-	reg_pointers[9] = &cpu->de;
-	reg_pointers[10] = &cpu->hl;
+	reg_pointers[7] = (unsigned char*)&cpu->af;
+	reg_pointers[8] = (unsigned char*)&cpu->bc;
+	reg_pointers[9] = (unsigned char*)&cpu->de;
+	reg_pointers[10] = (unsigned char*)&cpu->hl;
 	//reg_pointers[11] = &cpu->;
 	//reg_pointers[12] = &cpu->;
-	reg_pointers[15] = &cpu->sp;
+	reg_pointers[15] = (unsigned char*)&cpu->sp;
+	load_bios();
 	cpu_reset();
+}
+
+int cpu_step() {
+	int i;
+	printf("\t\tpc:%04x\n", cpu->pc);
+	cpu_fetch();
+	cpu_execute();
+	check_interrupts();
+
+	printf("Registers: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
+	printf("Stack:");
+	for (i = 0xfffe; i > cpu->sp; i--)
+		printf("%x ", read_8_bit(i));
+	printf("\n\n");
+
+	if (cpu->pc == 0x1d)
+		printf("wow i made it\n");
+	return 0;
 }
 
 int cpu_fetch() {
@@ -71,17 +90,20 @@ int cpu_fetch() {
 int cpu_execute() {
 	//if DEBUG
 	//display assembly or print log
-	if (ir.execute == NULL)
-		//log this
-		;
-	else
-		(ir.execute)(ir.first_param, ir.second_param);
-	
+	if (ir.execute == NULL) {
+		printf("cpu_execute: Error unimplemented opcode [%s]\n", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+		return -1;
+	}
+
+	printf("cpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+	printf("%x %x \n", ir.first_param, ir.second_param);
+	(ir.execute)(ir.first_param, ir.second_param);
+
 	return 0;
 }
 
 int check_interrupts() {
-
+	return 0;
 }
 
 void cpu_reset() {
@@ -194,7 +216,7 @@ void LD_HLI_A(unsigned short hl , unsigned short a) {
 	write_8_bit(cpu->hl++, cpu->a);
 }
 
-void LDH_n_A(unsigned short n, unsigned short A) {
+void LDH_n_A(unsigned short NA, unsigned short n) {
 	write_8_bit(0xFF00 + n, cpu->a);
 }
 
@@ -242,8 +264,8 @@ void LD_nn_SP(unsigned short sp, unsigned short nn) {
 }
 
 void PUSH_nn(unsigned short nn, unsigned short NA) {
+	cpu->sp -= 2;
 	write_16_bit(cpu->sp, nn);
-	cpu->sp-=2;
 }
 
 void POP_nn(unsigned short nn, unsigned short NA) {
@@ -499,12 +521,10 @@ void INC_n(unsigned short type, unsigned short n) {
 
 }
 
-void DEC_n(unsigned short type, unsigned short n) {
+void DEC_n(unsigned short NA, unsigned short n) {
 	unsigned char val;
 
-	if (type == READ_8)
-		;
-	else if (n == HL)
+	if (n == HL)
 		val = read_8_bit(cpu->hl);
 	else
 		val = *reg_pointers[n];
@@ -957,10 +977,10 @@ void BIT_b_r(unsigned short b, unsigned short r) {
 		res = *reg_pointers[r] & bit_test;
 	}
 
-	if (!res)
-		set_flag(ZERO_FLAG);
-	else
+	if (res)
 		clear_flag(ZERO_FLAG);
+	else
+		set_flag(ZERO_FLAG);
 
 	clear_flag(SUBTRACT_FLAG);
 	set_flag(HALF_CARRY_FLAG);
@@ -1002,16 +1022,16 @@ void JP_cc_nn(unsigned short cc, unsigned short nn) {
 
 	switch (cc) {
 		case NZ:
-			jump = !(cpu->flags & ZERO_FLAG);
+			jump = !(cpu->f & ZERO_FLAG);
 			break;
 		case Z:
-			jump = cpu->flags & ZERO_FLAG;
+			jump = cpu->f & ZERO_FLAG;
 			break;
 		case NC:
-			jump = !(cpu->flags & CARRY_FLAG);
+			jump = !(cpu->f & CARRY_FLAG);
 			break;
 		case C:
-			jump = cpu->flags & CARRY_FLAG;
+			jump = cpu->f & CARRY_FLAG;
 			break;
 		default:
 			//Error here
@@ -1035,16 +1055,16 @@ void JR_cc_n(unsigned short cc, unsigned short n) {
 
 	switch (cc) {
 	case NZ:
-		jump = !(cpu->flags & ZERO_FLAG);
+		jump = !(cpu->f & ZERO_FLAG);
 		break;
 	case Z:
-		jump = cpu->flags & ZERO_FLAG;
+		jump = cpu->f & ZERO_FLAG;
 		break;
 	case NC:
-		jump = !(cpu->flags & CARRY_FLAG);
+		jump = !(cpu->f & CARRY_FLAG);
 		break;
 	case C:
-		jump = cpu->flags & CARRY_FLAG;
+		jump = cpu->f & CARRY_FLAG;
 		break;
 	default:
 		//Error here
@@ -1068,16 +1088,16 @@ void CALL_cc_nn(unsigned short cc, unsigned short nn) {
 
 	switch (cc) {
 	case NZ:
-		jump = !(cpu->flags & ZERO_FLAG);
+		jump = !(cpu->f & ZERO_FLAG);
 		break;
 	case Z:
-		jump = cpu->flags & ZERO_FLAG;
+		jump = cpu->f & ZERO_FLAG;
 		break;
 	case NC:
-		jump = !(cpu->flags & CARRY_FLAG);
+		jump = !(cpu->f & CARRY_FLAG);
 		break;
 	case C:
-		jump = cpu->flags & CARRY_FLAG;
+		jump = cpu->f & CARRY_FLAG;
 		break;
 	default:
 		//Error here
@@ -1106,16 +1126,16 @@ void RET_cc(unsigned short cc, unsigned short NA) {
 
 	switch (cc) {
 	case NZ:
-		ret = !(cpu->flags & ZERO_FLAG);
+		ret = !(cpu->f & ZERO_FLAG);
 		break;
 	case Z:
-		ret = cpu->flags & ZERO_FLAG;
+		ret = cpu->f & ZERO_FLAG;
 		break;
 	case NC:
-		ret = !(cpu->flags & CARRY_FLAG);
+		ret = !(cpu->f & CARRY_FLAG);
 		break;
 	case C:
-		ret = cpu->flags & CARRY_FLAG;
+		ret = cpu->f & CARRY_FLAG;
 		break;
 	default:
 		//Error here

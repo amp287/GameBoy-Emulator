@@ -59,6 +59,7 @@ typedef struct {
 
 void cpu_init();
 void cpu_reset();
+int cpu_step();
 int cpu_fetch();
 int cpu_execute();
 int check_interrupts();
@@ -399,7 +400,7 @@ static INSTR opcodes[] = {
 	{"XX", NULL, NA, NA},			//0xDD
 	{"SBC A, n", SBC_A_n, READ_8, READ_8},		//0xDE
 	{"RST 18", RST_n, 0x18, NA},		//0xDF
-	{"LDH n, A", LDH_n_A, READ_8, A},		//0xE0
+	{"LDH n, A", LDH_n_A, NA, READ_8},		//0xE0
 	{"POP HL", POP_nn, HL, NA},		//0xE1
 	{"LD (C), A", LD_C_A, C, A},		//0xE2
 	{"XX", NULL, NA, NA},			//0xE3

@@ -1,16 +1,16 @@
 #include "Memory.h"
+#include <string.h>
+#include <stdio.h>
 
-unsigned char rom_cartidge[32768];
-unsigned char vram[8192];
-unsigned char ext_ram[8192];	// RAM on cartridge
-unsigned char working_ram[8192];
-unsigned char sprite_info[160];
-unsigned char io[128];
-unsigned char zero_pg_ram[128];
+char in_bios;
 
 unsigned char read_8_bit(unsigned short addr) {
-	if(addr < 0x8000)
+	if (addr < 0x8000) {
+		if (in_bios && addr < 0x100)
+				return bios[addr];
 		return rom_cartidge[addr];
+	}
+		
 	if (addr < 0xA000)
 		return vram[addr - 0x8000];
 	if (addr < 0xC000)
@@ -33,6 +33,10 @@ unsigned short read_16_bit(unsigned short addr) {
 }
 
 void write_8_bit(unsigned short addr, unsigned char val) {
+	// Last step in bios to unmap the boot rom (https://realboyemulator.wordpress.com/2013/01/03/a-look-at-the-game-boy-bootstrap-let-the-fun-begin/)
+	if (addr == 0xFF50 && val == 1)
+		in_bios = 0;
+	
 	if (addr < 0x8000)
 		rom_cartidge[addr] = val;
 	else if (addr < 0xA000)
@@ -60,4 +64,13 @@ void write_16_bit(unsigned short addr, unsigned short val) {
 
 	write_8_bit(addr, two);
 	write_8_bit(addr + 1, one);
+}
+
+void load_bios() {
+	in_bios = 1;
+	memcpy(rom_cartidge, bios, sizeof(bios));
+}
+
+void load_rom() {
+	FILE *rom = fopen("Pokemon Blue.gb", "r");
 }
