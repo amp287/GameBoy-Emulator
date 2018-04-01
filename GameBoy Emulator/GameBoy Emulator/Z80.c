@@ -34,6 +34,7 @@ void cpu_init() {
 	//reg_pointers[12] = &cpu->;
 	reg_pointers[15] = (unsigned char*)&cpu->sp;
 	load_bios();
+	load_rom();
 	cpu_reset();
 }
 
@@ -46,11 +47,11 @@ int cpu_step() {
 
 	printf("Registers: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
 	printf("Stack:");
-	for (i = 0xfffe; i > cpu->sp; i--)
+	for (i = 0xfffd; i >= cpu->sp; i--)
 		printf("%x ", read_8_bit(i));
 	printf("\n\n");
 
-	if (cpu->pc == 0x1d)
+	if (cpu->pc == 0x30)
 		printf("wow i made it\n");
 	return 0;
 }
@@ -92,6 +93,7 @@ int cpu_execute() {
 	//display assembly or print log
 	if (ir.execute == NULL) {
 		printf("cpu_execute: Error unimplemented opcode [%s]\n", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+		getchar();
 		return -1;
 	}
 
@@ -172,7 +174,13 @@ void LD_A_imm(unsigned short a, unsigned short immediate) {
 	cpu->a = (unsigned char)immediate;
 }
 
-void LD_n_A(unsigned short n, unsigned short a) {
+void LD_n_A(unsigned short type, unsigned short n) {
+
+	if (type == READ_16) {
+		write_8_bit(n, cpu->a);
+		return;
+	}
+
 	switch (n) {
 		case BC:
 			write_8_bit(cpu->bc, cpu->a);
@@ -264,8 +272,25 @@ void LD_nn_SP(unsigned short sp, unsigned short nn) {
 }
 
 void PUSH_nn(unsigned short nn, unsigned short NA) {
+	unsigned short val;
+
 	cpu->sp -= 2;
-	write_16_bit(cpu->sp, nn);
+
+	switch (nn) {
+		case AF:
+			val = cpu->af;
+			break;
+		case BC:
+			val = cpu->bc;
+			break;
+		case DE:
+			val = cpu->de;
+			break;
+		case HL:
+			val = cpu->hl;
+		}
+
+	write_16_bit(cpu->sp, val);
 }
 
 void POP_nn(unsigned short nn, unsigned short NA) {
@@ -483,11 +508,10 @@ void CP_n(unsigned short type, unsigned short n) {
 	else
 		clear_flag(HALF_CARRY_FLAG);
 
-
 	if (cpu->a == n)
-		clear_flag(ZERO_FLAG);
-	else
 		set_flag(ZERO_FLAG);
+	else
+		clear_flag(ZERO_FLAG);
 }
 
 void INC_n(unsigned short type, unsigned short n) {
@@ -589,11 +613,35 @@ void ADD_SP_n(unsigned short sp, unsigned short n) {
 }
 
 void INC_nn(unsigned short nn, unsigned short NA) {
-	*reg_pointers[nn]++;
+	switch (nn) {
+		case AF:
+			cpu->af++;
+			break;
+		case BC:
+			cpu->bc++;
+			break;
+		case DE:
+			cpu->de++;
+			break;
+		case HL:
+			cpu->hl++;
+	}
 }
 
 void DEC_nn(unsigned short nn, unsigned short NA) {
-	*reg_pointers[nn]--;
+	switch (nn) {
+		case AF:
+			cpu->af--;
+			break;
+		case BC:
+			cpu->bc--;
+			break;
+		case DE:
+			cpu->de--;
+			break;
+		case HL:
+			cpu->hl--;
+	}
 }
 
 //Miscellaneous
@@ -1072,7 +1120,7 @@ void JR_cc_n(unsigned short cc, unsigned short n) {
 	}
 
 	if (jump)
-		cpu->pc += (signed char) n;
+		cpu->pc += (signed char)n;
 }
 
 //Calls

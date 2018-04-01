@@ -8,7 +8,7 @@ unsigned char read_8_bit(unsigned short addr) {
 	if (addr < 0x8000) {
 		if (in_bios && addr < 0x100)
 				return bios[addr];
-		return rom_cartidge[addr];
+		return rom_cartridge[addr];
 	}
 		
 	if (addr < 0xA000)
@@ -38,7 +38,7 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		in_bios = 0;
 	
 	if (addr < 0x8000)
-		rom_cartidge[addr] = val;
+		rom_cartridge[addr] = val;
 	else if (addr < 0xA000)
 		vram[addr - 0x8000] = val;
 	else if (addr < 0xC000)
@@ -59,18 +59,23 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 // Assumes that when type casting higher order bits are discarded
 // unsure which byte goes where 
 void write_16_bit(unsigned short addr, unsigned short val) {
-	unsigned char one = (char)val;
-	unsigned char two = val >> 8;
+	unsigned char one = (unsigned char)(val & 0x00ff);
+	unsigned char two = (unsigned char)(val >> 8);
 
-	write_8_bit(addr, two);
-	write_8_bit(addr + 1, one);
+	write_8_bit(addr, one);
+	write_8_bit(addr + 1, two);
 }
 
 void load_bios() {
 	in_bios = 1;
-	memcpy(rom_cartidge, bios, sizeof(bios));
 }
 
+//TODO:add rom header check (maybe)
 void load_rom() {
-	FILE *rom = fopen("Pokemon Blue.gb", "r");
+	FILE *rom = fopen("../Roms/Pokemon Blue.gb", "r");
+	int i = 0;
+
+	while (fscanf(rom, "%c", &rom_cartridge[i]) != EOF)
+		i++;
+	fclose(rom);
 }

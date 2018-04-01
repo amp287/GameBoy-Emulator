@@ -178,7 +178,7 @@ void RETI(unsigned short NA_1, unsigned short NA_2);
 static INSTR opcodes[] = {
 	{"NOP", NOP, NA, NA},			//0x00
 	{"LD BC, nn", LD_n_nn, BC, READ_16},	//0x01
-	{"LD BC, A", LD_n_A, BC, A},		//0x02
+	{"LD BC, A", LD_n_A, NA, BC},		//0x02
 	{"INC BC", INC_nn, BC, NA},		//0x03
 	{"INC B", INC_n, NA, B},			//0x04
 	{"DEC B", DEC_n, NA, B},			//0x05
@@ -194,7 +194,7 @@ static INSTR opcodes[] = {
 	{"RRCA", RRCA, A, NA},			//0x0F
 	{"STOP", NULL, NA, NA },			//0x10
 	{"LD DE, nn", LD_n_nn, DE, READ_16},	//0x11
-	{"LD DE, A", LD_n_A, DE, A},		//0x12
+	{"LD DE, A", LD_n_A, NA, DE},		//0x12
 	{"INC DE", INC_nn, DE, NA},		//0x13
 	{"INC D", INC_n, NA, D},			//0x14
 	{"DEC D", DEC_n, NA, D},			//0x15
@@ -247,7 +247,7 @@ static INSTR opcodes[] = {
 	{"LD B, H", LD_r1_r2, B, H},		//0x44
 	{"LD B, L", LD_r1_r2, B, L},		//0x45
 	{"LD B, HL", LD_r1_r2, B, HL},		//0x46
-	{"LD B, A", LD_n_A, B, A},		//0x47
+	{"LD B, A", LD_n_A, NA, B},		//0x47
 	{"LD C, B", LD_r1_r2, C, B},		//0x48
 	{"LD C, C", LD_r1_r2, C, C},		//0x49
 	{"LD C, D", LD_r1_r2, C, D},		//0x4A
@@ -255,7 +255,7 @@ static INSTR opcodes[] = {
 	{"LD C, H", LD_r1_r2, C, H},		//0x4C
 	{"LD C, L", LD_r1_r2, C, L},		//0x4D
 	{"LD C, HL", LD_r1_r2, C, HL},		//0x4E
-	{"LD C, A", LD_n_A, C, A},		//0x4F
+	{"LD C, A", LD_n_A, NA, C},		//0x4F
 	{"LD D, B", LD_r1_r2, D, B},		//0x50
 	{"LD D, C", LD_r1_r2, D, C},		//0x51
 	{"LD D, D", LD_r1_r2, D, D},		//0x52
@@ -263,7 +263,7 @@ static INSTR opcodes[] = {
 	{"LD D, H", LD_r1_r2, D, H},		//0x54
 	{"LD D, L", LD_r1_r2, D, L},		//0x55
 	{"LD D, HL", LD_r1_r2, D, HL},		//0x56
-	{"LD D, A", LD_n_A, D, A},		//0x57
+	{"LD D, A", LD_n_A, NA, D},		//0x57
 	{"LD E, B", LD_r1_r2, E, B},		//0x58
 	{"LD E, C", LD_r1_r2, E, C},		//0x59
 	{"LD E, D", LD_r1_r2, E, D},		//0x5A
@@ -271,7 +271,7 @@ static INSTR opcodes[] = {
 	{"LD E, H", LD_r1_r2, E, H},		//0x5C
 	{"LD E, L", LD_r1_r2, E, L},		//0x5D
 	{"LD E, HL", LD_r1_r2, E, HL},		//0x5E
-	{"LD E, A", LD_n_A, E, A},		//0x5F
+	{"LD E, A", LD_n_A, NA, E},		//0x5F
 	{"LD H, B", LD_r1_r2, H, B},		//0x60
 	{"LD H, C", LD_r1_r2, H, C},		//0x61
 	{"LD H, D", LD_r1_r2, H, D},		//0x62
@@ -279,7 +279,7 @@ static INSTR opcodes[] = {
 	{"LD H, H", LD_r1_r2, H, H},		//0x64
 	{"LD H, L", LD_r1_r2, H, L},		//0x65
 	{"LD H, HL", LD_r1_r2, H, HL},		//0x66
-	{"LD H, A", LD_n_A, H, A},		//0x67
+	{"LD H, A", LD_n_A, NA, H},		//0x67
 	{"LD L, B", LD_r1_r2, L, B},		//0x68
 	{"LD L, C", LD_r1_r2, L, C},		//0x69
 	{"LD L, D", LD_r1_r2, L, D},		//0x6A
@@ -287,7 +287,7 @@ static INSTR opcodes[] = {
 	{"LD L, H", LD_r1_r2, L, H},		//0x6C
 	{"LD L, L", LD_r1_r2, L, L},		//0x6D
 	{"LD L, HL", LD_r1_r2, L, HL},		//0x6E
-	{"LD L, A", LD_n_A, L, A},		//0x6F
+	{"LD L, A", LD_n_A, NA, L},		//0x6F
 	{"LD HL, B", LD_r1_r2, HL, B},		//0x70
 	{"LD HL, C", LD_r1_r2, HL, C},		//0x71
 	{"LD HL, D", LD_r1_r2, HL, D},		//0x72
@@ -295,7 +295,7 @@ static INSTR opcodes[] = {
 	{"LD HL, H", LD_r1_r2, HL, H},		//0x74
 	{"LD HL, L", LD_r1_r2, HL, L},		//0x75
 	{"HALT", NULL, NA, NA },		//0x76
-	{"LD HL, A", LD_n_A, HL, A},		//0x77
+	{"LD HL, A", LD_n_A, NA, HL},		//0x77
 	{"LD A, B", LD_r1_r2, A, B},		//0x78
 	{"LD A, C", LD_r1_r2, A, C},		//0x79
 	{"LD A, D", LD_r1_r2, A, D},		//0x7A
@@ -410,7 +410,7 @@ static INSTR opcodes[] = {
 	{"RST 20", RST_n, 0x20, NA},		//0xE7
 	{"ADD SP, n", ADD_SP_n, SP, READ_8},	//0xE8
 	{"JP HL", JP_HL, HL, NA},		//0xE9
-	{"LD nn, A", LD_n_A, READ_16, A},		//0xEA
+	{"LD nn, A", LD_n_A, READ_16, READ_16},		//0xEA
 	{"XX", NULL, NA, NA },			//0xEB
 	{"XX", NULL, NA, NA },			//0xEC
 	{"XX", NULL, NA, NA },			//0xED
