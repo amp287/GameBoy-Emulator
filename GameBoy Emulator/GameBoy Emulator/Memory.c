@@ -23,9 +23,12 @@ unsigned char read_8_bit(unsigned short addr) {
 		return sprite_info[addr - 0xFE00];
 	if (addr < 0xFF80)
 		return io[addr - 0xFF00];
-	if (addr < 0x10000)
-		return zero_pg_ram[addr - 0xFF80];
-	return 0;
+	if (addr == INTERRUPT_ENABLE)
+		return zero_pg_ram[INTERRUPT_ENABLE];
+	if (addr == INTERRUPT_FLAGS)
+		return zero_pg_ram[INTERRUPT_FLAGS];
+	
+	return zero_pg_ram[addr - 0xFF80];
 }
 
 unsigned short read_16_bit(unsigned short addr) {

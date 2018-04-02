@@ -5,6 +5,15 @@
 #define HALF_CARRY_FLAG 0x20
 #define CARRY_FLAG 0x10
 
+//if 0 disable interrupt enable otherwise 
+int enable_interrupt;
+// interrupt counter set to 1 to change master interrupt after 1 instruction
+int counter_interrupt;
+//Stop cpu until interrupt occurs
+int halt_flag;
+// stop cpu and LCD until button is pressed
+int stop_flag;
+
 //cf is carry flag
 enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP, READ_8, READ_16, NA};
 
@@ -21,6 +30,8 @@ typedef struct {
 	long m, t;
 
 	unsigned char flags;
+
+	unsigned char master_interrupt;
 	
 	// Registers
 	union {

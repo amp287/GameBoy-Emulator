@@ -38,19 +38,29 @@ void cpu_init() {
 	cpu_reset();
 }
 
-int cpu_step() {
+void cpu_print_reg_stack() {
 	int i;
-	printf("\t\tpc:%04x\n", cpu->pc);
-	cpu_fetch();
-	cpu_execute();
-	check_interrupts();
-
 	printf("Registers: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
 	printf("Stack:");
 	for (i = 0xfffd; i >= cpu->sp; i--)
 		printf("%x ", read_8_bit(i));
 	printf("\n\n");
+}
 
+int cpu_step() {
+
+	printf("\t\tpc:%04x\n", cpu->pc);
+
+	if (!halt_flag || !stop_flag) {
+		cpu_fetch();
+		cpu_execute();
+	}
+
+	check_interrupts();
+
+	cpu_print_reg_stack();
+
+	// Remove this after testing
 	if (cpu->pc == 0x30)
 		printf("wow i made it\n");
 	return 0;
@@ -105,6 +115,42 @@ int cpu_execute() {
 }
 
 int check_interrupts() {
+	unsigned char enabled = read_8_bit(INTERRUPT_ENABLE);
+	unsigned char flags = read_8_bit(INTERRUPT_FLAGS);
+
+	//used to enable interrupts after one instruction
+	if (counter_interrupt > 0)
+		enable_interrupt--;
+	if (counter_interrupt == 0) {
+		cpu->master_interrupt = enable_interrupt;
+		enable_interrupt--;
+	}
+
+	if (cpu->master_interrupt && enabled && flags) {
+		unsigned char fired = enabled & flags;
+
+		if (halt_flag)
+			halt_flag = 0;
+
+		cpu->master_interrupt = 0;
+		cpu->sp -= 2;
+		write_16_bit(cpu->sp, cpu->pc);
+
+		if (fired & INTERRUPT_VBLANK) {
+
+		} else if (fired & INTERRUPT_LCD) {
+			cpu->pc = 0x48;
+		} else if (fired & INTERRUPT_TIMER) {
+			cpu->pc = 0x50;
+		} else if (fired & INTERRUPT_SERIAL) {
+			cpu->pc = 0x58;
+		} else if (fired & INTERRUPT_JOYPAD) {
+			cpu->pc = 0x60;
+			stop_flag = 0;
+		}
+			
+		//add 12 ticks
+	}
 	return 0;
 }
 
@@ -726,31 +772,29 @@ void NOP(unsigned short NA_1, unsigned short NA_2) {
 }
 
 //Power down (Stop) CPU until interrupt occurs
-//TODO: Set up interrupts and fill in this opcode
 void HALT(unsigned short NA_1, unsigned short NA_2) {
-
+	halt_flag = 1;
 }
 
 //Halt CPU & LCD display until button pressed
-//TODO: Set up interrupts and fill in this opcode
 void STOP(unsigned short NA_1, unsigned short NA_2) {
-
+	stop_flag = 1;
 }
 
 //This instruction disables interrupts but not
 //immediately.Interrupts are disabled after
 //instruction after DI is executed.
-//TODO: This
 void DI(unsigned short NA_1, unsigned short NA_2) {
-
+	enable_interrupt = 0;
+	counter_interrupt = 1;
 }
 
 //Enable interrupts. This intruction enables interrupts
 //but not immediately.Interrupts are enabled after
 //instruction after EI is executed.
-//TODO: This
 void EI(unsigned short NA_1, unsigned short NA_2) {
-
+	enable_interrupt = 1;
+	counter_interrupt = 1;
 }
 
 //Rotates & Shifts
@@ -1014,7 +1058,6 @@ void SRL_n(unsigned short n, unsigned short NA) {
 
 //Bit Opcodes
 
-//Needs to be tested (ALL OF THEM)
 void BIT_b_r(unsigned short b, unsigned short r) {
 	unsigned char bit_test = 1 << b;
 	unsigned int res;
@@ -1193,7 +1236,9 @@ void RET_cc(unsigned short cc, unsigned short NA) {
 	if (ret)
 		RET(0, 0);
 }
-//Interuppt stuff
-void RETI(unsigned short NA_1, unsigned short NA_2) {
 
+void RETI(unsigned short NA_1, unsigned short NA_2) {
+	cpu->master_interrupt = 1;
+	cpu->pc = read_16_bit(cpu->sp);
+	cpu->sp += 2;
 }
