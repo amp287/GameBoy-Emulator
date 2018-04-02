@@ -1,5 +1,6 @@
 #include "Z80.h"
 #include "Memory.h"
+#include "LCD.h"
 #include "stdio.h"
 
 CPU *cpu;
@@ -48,12 +49,14 @@ void cpu_print_reg_stack() {
 }
 
 int cpu_step() {
-
+	int cycles = 0;
 	printf("\t\tpc:%04x\n", cpu->pc);
 
 	if (!halt_flag || !stop_flag) {
-		cpu_fetch();
-		cpu_execute();
+		cycles = cpu_fetch();
+		if (cpu_execute()) {
+			return -1;
+		}
 	}
 
 	check_interrupts();
@@ -63,7 +66,8 @@ int cpu_step() {
 	// Remove this after testing
 	if (cpu->pc == 0x30)
 		printf("wow i made it\n");
-	return 0;
+
+	return cycles;
 }
 
 int cpu_fetch() {
@@ -95,7 +99,7 @@ int cpu_fetch() {
 
 	ir.execute = map[index].execute;
 	
-	return 0;
+	return map[index].cycles;
 }
 
 int cpu_execute() {
@@ -778,7 +782,10 @@ void HALT(unsigned short NA_1, unsigned short NA_2) {
 
 //Halt CPU & LCD display until button pressed
 void STOP(unsigned short NA_1, unsigned short NA_2) {
+	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
 	stop_flag = 1;
+	lcd_control |= ~LCD_ENABLED;
+	write_8_bit(LCD_CONTROL, lcd_control);//TODO check this http://www.codeslinger.co.uk/pages/projects/gameboy/lcd.html
 }
 
 //This instruction disables interrupts but not

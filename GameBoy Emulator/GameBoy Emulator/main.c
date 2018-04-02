@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "Memory.h"
 
+
+
 int main() {
 	int i;
 	/*FILE *bios_asm = fopen("bios.txt", "w");
@@ -29,9 +31,21 @@ int main() {
 	}
 	fclose(bios_asm);*/
 	cpu_init();
+	// clock cycles per second / FPS
+	// 4194304/60
+	const int max_cycles = 69905;
 	
 	while(1) {
-		cpu_step();
+		int cycles_this_update = 0;
+		// ensures 60 Fps
+		while (cycles_this_update < max_cycles) {
+			int cycles = cpu_step();
+			cycles_this_update += cycles;
+			//update_timers()
+			//update_graphics()
+
+		}
+		//render_screen();
 	}
 
 	printf("Press a character and then enter to quit.\n");
