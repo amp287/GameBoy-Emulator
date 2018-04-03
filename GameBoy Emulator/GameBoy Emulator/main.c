@@ -1,11 +1,10 @@
 #include "Z80.h"
 #include <stdio.h>
 #include "Memory.h"
-
+#include "GPU.h"
 
 
 int main() {
-	int i;
 	/*FILE *bios_asm = fopen("bios.txt", "w");
 
 	for (i = 0; i < 0xff; i++)
@@ -31,6 +30,7 @@ int main() {
 	}
 	fclose(bios_asm);*/
 	cpu_init();
+	gpu_init();
 	// clock cycles per second / FPS
 	// 4194304/60
 	const int max_cycles = 69905;
@@ -47,7 +47,7 @@ int main() {
 		}
 		//render_screen();
 	}
-
+	gpu_stop();
 	printf("Press a character and then enter to quit.\n");
 	getchar();
 	return 0;

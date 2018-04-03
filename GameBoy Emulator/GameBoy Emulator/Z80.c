@@ -1,6 +1,6 @@
 #include "Z80.h"
 #include "Memory.h"
-#include "LCD.h"
+#include "GPU.h"
 #include "stdio.h"
 
 CPU *cpu;
@@ -141,18 +141,24 @@ int check_interrupts() {
 		write_16_bit(cpu->sp, cpu->pc);
 
 		if (fired & INTERRUPT_VBLANK) {
-
+			cpu->pc = 0x40;
+			flags &= ~INTERRUPT_VBLANK;
 		} else if (fired & INTERRUPT_LCD) {
 			cpu->pc = 0x48;
+			flags &= ~INTERRUPT_LCD;
 		} else if (fired & INTERRUPT_TIMER) {
 			cpu->pc = 0x50;
+			flags &= ~INTERRUPT_TIMER;
 		} else if (fired & INTERRUPT_SERIAL) {
 			cpu->pc = 0x58;
+			flags &= ~INTERRUPT_SERIAL;
 		} else if (fired & INTERRUPT_JOYPAD) {
 			cpu->pc = 0x60;
 			stop_flag = 0;
+			flags &= ~INTERRUPT_JOYPAD;
 		}
-			
+
+		write_8_bit(INTERRUPT_FLAGS, flags);
 		//add 12 ticks
 	}
 	return 0;

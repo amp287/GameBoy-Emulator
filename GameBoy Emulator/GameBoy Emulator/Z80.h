@@ -166,7 +166,7 @@ void SET_b_r(unsigned short b, unsigned short r);
 void RES_b_r(unsigned short b, unsigned short r);
 
 //Jumps
-void JP_nn(unsigned short nn);
+void JP_nn(unsigned short NA, unsigned short nn);
 void JP_cc_nn(unsigned short cc, unsigned short nn);
 void JP_HL(unsigned short NA_1, unsigned short NA_2);
 void JR_n(unsigned short n, unsigned short NA_1);
