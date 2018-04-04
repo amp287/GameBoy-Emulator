@@ -50,7 +50,7 @@ void cpu_print_reg_stack() {
 
 int cpu_step() {
 	int cycles = 0;
-	//printf("\t\tpc:%04x\n", cpu->pc);
+	printf("\t\tpc:%04x\n", cpu->pc);
 
 	if (!halt_flag || !stop_flag) {
 		cycles = cpu_fetch();
@@ -61,10 +61,10 @@ int cpu_step() {
 
 	
 
-	//cpu_print_reg_stack();
+	cpu_print_reg_stack();
 
 	// Remove this after testing
-	if (cpu->pc == 0x6e)
+	if (cpu->pc == 0x6a)
 		printf("wow i made it\n");
 	return cycles;
 }
@@ -110,8 +110,8 @@ int cpu_execute() {
 		return -1;
 	}
 
-	//printf("cpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
-	//printf("%x %x \n", ir.first_param, ir.second_param);
+	printf("cpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+	printf("%x %x \n", ir.first_param, ir.second_param);
 	(ir.execute)(ir.first_param, ir.second_param);
 
 	return 0;
@@ -162,8 +162,6 @@ int check_interrupts() {
 	}
 	return 0;
 }
-
-
 
 void cpu_reset() {
 	cpu->pc = 0;

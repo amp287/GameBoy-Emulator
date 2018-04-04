@@ -18,24 +18,27 @@ GLFWwindow* window;
 unsigned char screen_buffer[160][144][3];
 
 void render_tiles() {
-	printf("RENDER START\n");
+
 	//used to find starting point in Background map
-	unsigned short scroll_y = read_8_bit(SCROLL_Y);
-	unsigned short scroll_x = read_8_bit(SCROLL_X);
+	unsigned char scroll_y = read_8_bit(SCROLL_Y);
+	unsigned char scroll_x = read_8_bit(SCROLL_X);
 
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
-	//unsigned char window = lcd_control & WINDOW_DISP_ENABLE;
+	unsigned char window = lcd_control & WINDOW_DISP_ENABLE;
 	unsigned short tile_set = lcd_control & BG_AND_WINDOW_TILE_DATA_SELECT;
 	unsigned char scanline = read_8_bit(LCD_SCANLINE);
 
-	int i, j;
+	int i, j, x, y;
 	unsigned short tile_map = read_8_bit(LCD_CONTROL) & BG_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
 
 	// skip tiles to get to correct x,y coordinate in map (starting tile)
-	tile_map += (scanline + scroll_y) + scroll_x;
+	tile_map += scroll_y * 32;
+	tile_map += (scanline / 8) * 32;
 
-	//tile at current scanline
-	//tile_map += (unsigned short)(scanline / 8);
+	tile_map += scroll_x;
+
+	y = (scanline + scroll_y) & 7;
+	x = scroll_x & 7;
 
 	//get 18 tiles and extract pixels
 	for (i = 0; i < 20; i++) {
@@ -46,17 +49,14 @@ void render_tiles() {
 		if (!tile_set) {
 			current_tile = (signed char)read_8_bit(tile_map++) + 128;
 			tile_set = TILE_SET_0;
-		} else {
+		}
+		else {
 			current_tile = read_8_bit(tile_map++);
 			tile_set = TILE_SET_1;
 		}
-
 		//starting tile_set address + current_tile index from map * previous tiles
 		byte1 = read_8_bit(tile_set + current_tile * 16);
 		byte2 = read_8_bit(tile_set + current_tile * 16 + 1);
-
-		if (byte1 | byte2)
-			printf("Moo\n");
 
 		// extract pixels
 		for (j = 7; j >= 0; j--) {
@@ -72,18 +72,14 @@ void render_tiles() {
 			else
 				color = 255;
 
-			screen_buffer[scanline - 1][i * 8 + j][0] = color;
-			screen_buffer[scanline - 1][i * 8 + j][1] = color;
-			screen_buffer[scanline - 1][i * 8 + j][2] = color;
+			screen_buffer[i * 8 + (7 - j)][scanline - 1][0] = color;
+			screen_buffer[i * 8 + (7 - j)][scanline - 1][1] = color;
+			screen_buffer[i * 8 + (7 - j)][scanline - 1][2] = color;
 		}
 	}
-
-	printf("RENDER END\n");
-
 }
 
 void draw_scanline() {
-	printf("Start Drawing to screen\n");
 	glClear(GL_COLOR_BUFFER_BIT);
 	glRasterPos2f(-1, 1);
 	glPixelZoom(1, -1);
@@ -91,15 +87,11 @@ void draw_scanline() {
 	glDrawPixels(160, 144, GL_RGB, GL_UNSIGNED_BYTE, screen_buffer);
 	glfwSwapBuffers(window);
 	//glfwPollEvents();
-	printf("Finshed Drawing\n");
 }
 
 void render_scanline() {
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
 	unsigned char current_scanline = read_8_bit(LCD_SCANLINE);
-
-	if (current_scanline > 144)
-		return;
 
 	if (lcd_control & BG_DISPLAY)
 		render_tiles();
@@ -187,12 +179,12 @@ void gpu_update(int cycles) {
 		scanline_cycles = 456;
 
 		// Reached the end of the screen
-		if (current_scanline == 145) {
+		if (current_scanline == 144) {
 			write_8_bit(INTERRUPT_FLAGS, INTERRUPT_VBLANK | read_8_bit(INTERRUPT_FLAGS));
 			draw_scanline();
 		} else if (current_scanline > 153) {
 			write_8_bit(LCD_SCANLINE, 0);
-		} else if(current_scanline <= 144) {
+		} else if(current_scanline < 144) {
 			render_scanline();
 		}
 	}
