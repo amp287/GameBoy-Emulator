@@ -5,6 +5,8 @@
 #define HALF_CARRY_FLAG 0x20
 #define CARRY_FLAG 0x10
 
+#define CPU_CLOCK_SPEED 4194304
+
 //if 0 disable interrupt enable otherwise 
 int enable_interrupt;
 // interrupt counter set to 1 to change master interrupt after 1 instruction

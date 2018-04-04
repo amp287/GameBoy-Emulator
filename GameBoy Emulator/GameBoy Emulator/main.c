@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "Memory.h"
 #include "GPU.h"
+#include "Timer.h"
 
 
 int main() {
@@ -41,9 +42,9 @@ int main() {
 		while (cycles_this_update < max_cycles) {
 			int cycles = cpu_step();
 			cycles_this_update += cycles;
-			//update_timers()
-			//update_graphics()
-
+			timer_update(cycles);
+			gpu_update(cycles);
+			check_interrupts();
 		}
 		//render_screen();
 	}

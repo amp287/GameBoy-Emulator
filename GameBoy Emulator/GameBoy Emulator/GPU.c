@@ -1,5 +1,6 @@
 #include "Memory.h"
 #include "GPU.h"
+#include <stdio.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -14,52 +15,97 @@ int scanline_cycles;
 int quit;
 GLFWwindow* window;
 
+unsigned char screen_buffer[160][144][3];
+
 void render_tiles() {
-	unsigned char scroll_y = read_8_bit(SCROLL_Y);
-	unsigned char scroll_x = read_8_bit(SCROLL_X);
-	unsigned char window_y = read_8_bit(WINDOW_Y);
-	unsigned char window_x = read_8_bit(WINDOW_X) - 7;
+	printf("RENDER START\n");
+	//used to find starting point in Background map
+	unsigned short scroll_y = read_8_bit(SCROLL_Y);
+	unsigned short scroll_x = read_8_bit(SCROLL_X);
 
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
-	unsigned char window = lcd_control & WINDOW_DISP_ENABLE;
+	//unsigned char window = lcd_control & WINDOW_DISP_ENABLE;
 	unsigned short tile_set = lcd_control & BG_AND_WINDOW_TILE_DATA_SELECT;
 	unsigned char scanline = read_8_bit(LCD_SCANLINE);
 
-	int i;
-	unsigned char tile_map;
-	unsigned char y_position;
-	unsigned char tile_row;
+	int i, j;
+	unsigned short tile_map = read_8_bit(LCD_CONTROL) & BG_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
 
-	if (window)
-		if (window_y > scanline)
-			window = 0;	//window is not on this scanline 
-		else
-			tile_map = lcd_control & WINDOW_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
-	
-	if(!window)
-		tile_map = lcd_control & BG_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
+	// skip tiles to get to correct x,y coordinate in map (starting tile)
+	tile_map += (scanline + scroll_y) + scroll_x;
 
-	if (!window)
-		y_position = scroll_y + scanline;
-	else
-		y_position = scanline - window_y;
+	//tile at current scanline
+	//tile_map += (unsigned short)(scanline / 8);
 
-	tile_row = ((unsigned char)(y_position / 8)) * 32;
+	//get 18 tiles and extract pixels
+	for (i = 0; i < 20; i++) {
+		unsigned char byte1;
+		unsigned char byte2;
+		unsigned short current_tile;
 
-	for (i = 0; i < 160; i++) {
+		if (!tile_set) {
+			current_tile = (signed char)read_8_bit(tile_map++) + 128;
+			tile_set = TILE_SET_0;
+		} else {
+			current_tile = read_8_bit(tile_map++);
+			tile_set = TILE_SET_1;
+		}
 
+		//starting tile_set address + current_tile index from map * previous tiles
+		byte1 = read_8_bit(tile_set + current_tile * 16);
+		byte2 = read_8_bit(tile_set + current_tile * 16 + 1);
+
+		if (byte1 | byte2)
+			printf("Moo\n");
+
+		// extract pixels
+		for (j = 7; j >= 0; j--) {
+			unsigned char pixel = ((byte2 >> (j - 1)) & 2) | ((byte1 >> j) & 1);
+			unsigned char color = 0;
+
+			if (pixel == 3)
+				color = 0;
+			else if (pixel == 2)
+				color = 96;
+			else if (pixel == 1)
+				color = 192;
+			else
+				color = 255;
+
+			screen_buffer[scanline - 1][i * 8 + j][0] = color;
+			screen_buffer[scanline - 1][i * 8 + j][1] = color;
+			screen_buffer[scanline - 1][i * 8 + j][2] = color;
+		}
 	}
+
+	printf("RENDER END\n");
+
 }
 
 void draw_scanline() {
+	printf("Start Drawing to screen\n");
+	glClear(GL_COLOR_BUFFER_BIT);
+	glRasterPos2f(-1, 1);
+	glPixelZoom(1, -1);
+
+	glDrawPixels(160, 144, GL_RGB, GL_UNSIGNED_BYTE, screen_buffer);
+	glfwSwapBuffers(window);
+	//glfwPollEvents();
+	printf("Finshed Drawing\n");
+}
+
+void render_scanline() {
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
+	unsigned char current_scanline = read_8_bit(LCD_SCANLINE);
+
+	if (current_scanline > 144)
+		return;
 
 	if (lcd_control & BG_DISPLAY)
 		render_tiles();
 
 	if (lcd_control & SPRITE_DISPLAY)
 		;//render_sprites();
-
 }
 
 void lcd_status() {
@@ -85,6 +131,7 @@ void lcd_status() {
 		status &= ~LCD_STATUS_MODE;
 		status |= LCD_STATUS_MODE_1;
 		interrupt = status & LCD_STATUS_MODE_1_INTERRUPT;
+
 		goto EXIT_LCD_STATUS;
 	}
 
@@ -134,18 +181,20 @@ void gpu_update(int cycles) {
 
 	if (scanline_cycles <= 0) {
 		current_scanline = read_8_bit(LCD_SCANLINE) + 1;
-		write_8_bit(LCD_SCANLINE, current_scanline);
+		io[LCD_SCANLINE - 0xFF00] = current_scanline;
 
 		// Number of cycles to complete scanline
 		scanline_cycles = 456;
 
 		// Reached the end of the screen
-		if (current_scanline == 144)
+		if (current_scanline == 145) {
 			write_8_bit(INTERRUPT_FLAGS, INTERRUPT_VBLANK | read_8_bit(INTERRUPT_FLAGS));
-		else if (current_scanline > 153)
+			draw_scanline();
+		} else if (current_scanline > 153) {
 			write_8_bit(LCD_SCANLINE, 0);
-		else if (current_scanline < 144)
-			;//drawscanline
+		} else if(current_scanline <= 144) {
+			render_scanline();
+		}
 	}
 }
 
@@ -153,7 +202,7 @@ int gpu_init() {
 	//glfwSetErrorCallback(error_callback);
 
 	quit = 0;
-
+	scanline_cycles = 0;
 	if (!glfwInit())
 		return -1;
 
@@ -169,7 +218,7 @@ int gpu_init() {
 	//glfwSetKeyCallback(window, key_callback); for setting up inputs later
 	glfwMakeContextCurrent(window);
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-	glfwSwapInterval(1);
+	//glfwSwapInterval(1);
 
 	/*while (!glfwWindowShouldClose(window) && !quit){
 		glfwSwapBuffers(window);

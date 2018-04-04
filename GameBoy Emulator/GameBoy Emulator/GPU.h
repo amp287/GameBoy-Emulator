@@ -30,7 +30,7 @@
 #define TILE_SET_1 0x8000
 #define TILE_SET_0 0x8800
 
-#define PIXEL_COLOR 0x3
+#define PIXEL_COLOR 0x88
 
 void gpu_update(int cycles);
 int gpu_init();

@@ -1,6 +1,8 @@
 #include "Memory.h"
+#include "Timer.h"
 #include <string.h>
 #include <stdio.h>
+
 
 char in_bios;
 
@@ -66,9 +68,19 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 
 	} else if (addr < 0xFF80) {
 
+		if (addr == DIVIDER_REGISTER)
+			io[addr - 0xFF00] = 0;
+
+		if (addr == TIMER_CONTROL) {
+			change_freq(val);
+			io[addr - 0xFF00] = val;
+			return;
+		}
+
 		if (addr == LCD_SCANLINE)
 			io[addr - 0xFF00] = 0; // Reset scanline to 0
-		io[addr - 0xFF00] = val;
+		else
+			io[addr - 0xFF00] = val;
 
 	} else if (addr < 0x10000) {
 
