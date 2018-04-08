@@ -433,7 +433,7 @@ static INSTR opcodes[] = {
 	{"LDH A, n", LDH_A_n, A, READ_8, 12},		//0xF0
 	{"POP AF", POP_nn, AF, NA, 12},		//0xF1
 	{"LD A, (C)", LD_A_C, A, C, 8},			//0xF2
-	{"DI", NULL, NA, NA , 4},			//0xF3
+	{"DI", DI, NA, NA , 4},			//0xF3
 	{"XX", NULL, NA, NA , 4},			//0xF4
 	{"PUSH AF", PUSH_nn, AF, NA, 16},		//0xF5
 	{"OR n", OR_n, READ_8, READ_8, 8},			//0xF6

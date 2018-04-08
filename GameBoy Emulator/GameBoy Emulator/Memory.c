@@ -9,7 +9,7 @@ char in_bios;
 unsigned char read_8_bit(unsigned short addr) {
 	if (addr < 0x8000) {
 		if (in_bios && addr < 0x100)
-				return bios[addr];
+			return bios[addr];
 		return rom_cartridge[addr];
 	}
 		
@@ -41,6 +41,9 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 	// Last step in bios to unmap the boot rom (https://realboyemulator.wordpress.com/2013/01/03/a-look-at-the-game-boy-bootstrap-let-the-fun-begin/)
 	if (addr == 0xFF50 && val == 1)
 		in_bios = 0;
+
+	if (addr == 0xffc3)
+		printf("hello\n");
 
 	if (addr < 0x8000) {
 
@@ -107,10 +110,11 @@ void load_bios() {
 
 //TODO:add rom header check (maybe)
 void load_rom() {
-	FILE *rom = fopen("../Roms/Pokemon Blue.gb", "r");
+	FILE *rom = fopen("../Roms/cpu_instrs.gb", "rb");
 	int i = 0;
 
-	while (fscanf(rom, "%c", &rom_cartridge[i]) != EOF)
-		i++;
+	//while (fscanf(rom, "%uc", &rom_cartridge[i]) != EOF && i < 0x8000) {
+		fread(&rom_cartridge, 0x8000, 1, rom);
+		//i++;
 	fclose(rom);
 }

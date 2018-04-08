@@ -2,6 +2,7 @@
 #include "Memory.h"
 #include "GPU.h"
 #include "stdio.h"
+#include "Debug.h"
 
 CPU *cpu;
 
@@ -35,22 +36,27 @@ void cpu_init() {
 	//reg_pointers[12] = &cpu->;
 	reg_pointers[15] = (unsigned char*)&cpu->sp;
 	load_bios();
+	//remove this after TEST
 	load_rom();
 	cpu_reset();
 }
 
 void cpu_print_reg_stack() {
 	int i;
-	printf("Registers: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
-	printf("Stack:");
-	for (i = 0xfffd; i >= cpu->sp; i--)
-		printf("%x ", read_8_bit(i));
-	printf("\n\n");
+	//fprintf(debug, "\t\tRegisters: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
+	//fprintf(debug, "\t\tStack:%x", cpu->sp);
+	//for (i = 0xfffd; i >= cpu->sp; i--)
+	//	printf("%x ", read_8_bit(i));
+	//fprintf(debug, "\n\n");
 }
 
 int cpu_step() {
 	int cycles = 0;
-	printf("\t\tpc:%04x\n", cpu->pc);
+	if (debug) {
+		//fprintf(debug, "----------------------------------------\n");
+		//fprintf(debug, "pc:%04x\n", cpu->pc);
+	}
+
 
 	if (!halt_flag || !stop_flag) {
 		cycles = cpu_fetch();
@@ -60,16 +66,22 @@ int cpu_step() {
 	}
 
 	
-
-	cpu_print_reg_stack();
+	//if(debug)
+		//cpu_print_reg_stack();
 
 	// Remove this after testing
-	if (cpu->pc == 0x6a)
-		printf("wow i made it\n");
+	//if (cpu->pc == 0x0296)
+	//	printf("wow i made it\n");
+
+	
 	return cycles;
 }
 
 int cpu_fetch() {
+	if (cpu->pc > 0x8000){
+		//printf("ERROR over 0x8000\n");
+		//getchar();
+	}
 	int index = read_8_bit(cpu->pc++);
 	INSTR *map;
 
@@ -105,13 +117,14 @@ int cpu_execute() {
 	//if DEBUG
 	//display assembly or print log
 	if (ir.execute == NULL) {
-		printf("cpu_execute: Error unimplemented opcode [%s]\n", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+		printf("\t\tcpu_execute: Error unimplemented opcode [%s]\n", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
 		getchar();
 		return -1;
 	}
-
-	printf("cpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
-	printf("%x %x \n", ir.first_param, ir.second_param);
+	if (debug) {
+		//printf("\t\tcpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+	//	printf("%x %x \n", ir.first_param, ir.second_param);
+	}
 	(ir.execute)(ir.first_param, ir.second_param);
 
 	return 0;
@@ -129,7 +142,7 @@ int check_interrupts() {
 		enable_interrupt--;
 	}
 
-	if (cpu->master_interrupt && enabled && flags) {
+	if (cpu->master_interrupt & (enabled & flags)) {
 		unsigned char fired = enabled & flags;
 
 		if (halt_flag)
@@ -158,22 +171,59 @@ int check_interrupts() {
 		}
 
 		write_8_bit(INTERRUPT_FLAGS, flags);
-		//add 12 ticks
+		// add 12 ticks
+		return 12;
 	}
+	
 	return 0;
 }
 
 void cpu_reset() {
-	cpu->pc = 0;
-	cpu->sp = 0;
-	cpu->clock_m = 0;
-	cpu->clock_t = 0;
-	cpu->m = 0;
-	cpu->t = 0;
-	cpu->af = 0;
-	cpu->bc = 0;
-	cpu->de = 0;
-	cpu->hl = 0;
+	/*cpu->a = 0x01;
+	cpu->f = 0xB0;
+	cpu->b = 0x00;
+	cpu->c = 0x13;
+	cpu->d = 0x00;
+	cpu->e = 0xd8;
+	cpu->h = 0x01;
+	cpu->l = 0x4D;
+	cpu->sp = 0xFFFe;*/
+	cpu->pc = 0x0;
+	
+	//write_8_bit(LCD_CONTROL, 91);
+	//write_8_bit(LCD_STATUS_REG, 0x53);
+
+	/*write_8_bit(0xFF05, 0);
+	write_8_bit(0xFF06, 0);
+	write_8_bit(0xFF07, 0);
+	write_8_bit(0xFF10, 0x80);
+	write_8_bit(0xFF11, 0xBF);
+	write_8_bit(0xFF12, 0xF3);
+	write_8_bit(0xFF14, 0xBF);
+	write_8_bit(0xFF16, 0x3F);
+	write_8_bit(0xFF17, 0x00);
+	write_8_bit(0xFF19, 0xBF);
+	write_8_bit(0xFF1A, 0x7A);
+	write_8_bit(0xFF1B, 0xFF);
+	write_8_bit(0xFF1C, 0x9F);
+	write_8_bit(0xFF1E, 0xBF);
+	write_8_bit(0xFF20, 0xFF);
+	write_8_bit(0xFF21, 0x00);
+	write_8_bit(0xFF22, 0x00);
+	write_8_bit(0xFF23, 0xBF);
+	write_8_bit(0xFF24, 0x77);
+	write_8_bit(0xFF25, 0xF3);
+	write_8_bit(0xFF26, 0xF1);
+	write_8_bit(0xFF40, 0x91);
+	write_8_bit(0xFF42, 0x00);
+	write_8_bit(0xFF43, 0x00);
+	write_8_bit(0xFF45, 0x00);
+	write_8_bit(0xFF47, 0xFC);
+	write_8_bit(0xFF48, 0xFF);
+	write_8_bit(0xFF49, 0xFF);
+	write_8_bit(0xFF4A, 0x00);
+	write_8_bit(0xFF4B, 0x00);
+	write_8_bit(0xFFFF, 0x00);*/
 }
 
 void clear_flag(unsigned char flag) {
@@ -195,10 +245,10 @@ void LD_nn_n(unsigned short r1, unsigned short immediate) {
 }
 
 void LD_r1_r2(unsigned short r1, unsigned short r2) {
-	if (r2 > L) {
-		*reg_pointers[r1] = read_8_bit(*(unsigned short*)reg_pointers[r2]);
-	} else if (r1 > L) {
-		write_8_bit(*(unsigned short*)reg_pointers[r1], *reg_pointers[r2]);
+	if (r2 == HL) {
+		*reg_pointers[r1] = read_8_bit(cpu->hl);
+	} else if (r1 == HL) {
+		write_8_bit(cpu->hl, *reg_pointers[r2]);
 	} else {
 		*reg_pointers[r1] = *reg_pointers[r2];
 	}
@@ -1206,7 +1256,7 @@ void CALL_cc_nn(unsigned short cc, unsigned short nn) {
 		//Error here
 		;
 	}
-	CALL_nn(nn, 0);
+	CALL_nn(0, nn);
 }
 
 //Restarts 
