@@ -30,7 +30,7 @@
 #define TILE_MAP_0 0x9800
 #define TILE_MAP_1 0x9C00
 #define TILE_SET_1 0x8000
-#define TILE_SET_0 0x8800
+#define TILE_SET_0 0x887F
 
 #define PIXEL_COLOR 0x88
 

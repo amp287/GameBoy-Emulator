@@ -47,7 +47,13 @@ void cpu_print_reg_stack() {
 	//fprintf(debug, "\t\tStack:%x", cpu->sp);
 	//for (i = 0xfffd; i >= cpu->sp; i--)
 	//	printf("%x ", read_8_bit(i));
-	//fprintf(debug, "\n\n");
+	fprintf(debug, "\n\n");
+
+	printf("\t\tRegisters: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
+	printf("\t\tStack:%x", cpu->sp);
+	//for (i = 0xfffd; i >= cpu->sp; i--)
+	//	printf("%x ", read_8_bit(i));
+	printf("\n\n");
 }
 
 int cpu_step() {
@@ -55,6 +61,8 @@ int cpu_step() {
 	if (debug) {
 		//fprintf(debug, "----------------------------------------\n");
 		//fprintf(debug, "pc:%04x\n", cpu->pc);
+		printf("----------------------------------------\n");
+		printf("pc:%04x\n", cpu->pc);
 	}
 
 
@@ -66,12 +74,12 @@ int cpu_step() {
 	}
 
 	
-	//if(debug)
-		//cpu_print_reg_stack();
+	if(debug)
+		cpu_print_reg_stack();
 
 	// Remove this after testing
-	//if (cpu->pc == 0x0296)
-	//	printf("wow i made it\n");
+	if (cpu->pc == 0x040)
+		printf("wow i made it\n");
 
 	
 	return cycles;
@@ -122,8 +130,8 @@ int cpu_execute() {
 		return -1;
 	}
 	if (debug) {
-		//printf("\t\tcpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
-	//	printf("%x %x \n", ir.first_param, ir.second_param);
+	printf("\t\tcpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+		printf("%x %x \n", ir.first_param, ir.second_param);
 	}
 	(ir.execute)(ir.first_param, ir.second_param);
 
@@ -179,21 +187,21 @@ int check_interrupts() {
 }
 
 void cpu_reset() {
-	/*cpu->a = 0x01;
-	cpu->f = 0xB0;
+	cpu->a = 0x00;
+	cpu->f = 0x00;
 	cpu->b = 0x00;
-	cpu->c = 0x13;
+	cpu->c = 0x00;
 	cpu->d = 0x00;
-	cpu->e = 0xd8;
-	cpu->h = 0x01;
-	cpu->l = 0x4D;
-	cpu->sp = 0xFFFe;*/
+	cpu->e = 0x00;
+	cpu->h = 0x00;
+	cpu->l = 0x00;
+	cpu->sp = 0xFFFe;
 	cpu->pc = 0x0;
 	
 	//write_8_bit(LCD_CONTROL, 91);
 	//write_8_bit(LCD_STATUS_REG, 0x53);
 
-	/*write_8_bit(0xFF05, 0);
+	write_8_bit(0xFF05, 0);
 	write_8_bit(0xFF06, 0);
 	write_8_bit(0xFF07, 0);
 	write_8_bit(0xFF10, 0x80);
@@ -223,7 +231,7 @@ void cpu_reset() {
 	write_8_bit(0xFF49, 0xFF);
 	write_8_bit(0xFF4A, 0x00);
 	write_8_bit(0xFF4B, 0x00);
-	write_8_bit(0xFFFF, 0x00);*/
+	write_8_bit(0xFFFF, 0x00);
 }
 
 void clear_flag(unsigned char flag) {

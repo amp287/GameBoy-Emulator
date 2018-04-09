@@ -17,8 +17,9 @@ int quit;
 GLFWwindow* window;
 GLuint readFboId;
 GLuint renderedTexture;
+int x = 0;
 
-unsigned char screen_buffer[160][144][3];
+unsigned char screen_buffer[144][160][3];
 
 void lcd_interrupt(char type) {
 	unsigned char interrupt = read_8_bit(INTERRUPT_FLAGS);
@@ -57,7 +58,7 @@ void test() {
 		black_tile[i] = 0xFFFF;
 		white_tile[i] = 0x0000;
 	}
-	printf("SIZE:%d\n", sizeof(black_tile));
+	//printf("SIZE:%d\n", sizeof(black_tile));
 	memcpy(vram, (unsigned char*)black_tile, 16);
 	memcpy(&vram[16], (unsigned char*)white_tile, 16);
 
@@ -82,7 +83,7 @@ void get_tile(unsigned short addr, unsigned short *tile) {
 void render_scanline_tiles() {
 
 	//fill checkerboard for display test
-	test();
+	//test();
 
 	//used to find starting point in Background map
 	unsigned char scroll_y = read_8_bit(SCROLL_Y);
@@ -96,12 +97,13 @@ void render_scanline_tiles() {
 	unsigned short tile_map = lcd_control & BG_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
 	unsigned short tile_set = lcd_control & BG_AND_WINDOW_TILE_DATA_SELECT ? TILE_SET_1 : TILE_SET_0;
 	
+
 	// starting tile y 0-31
-	unsigned char starting_tile_y = 0;//((scroll_y + scanline) / 8) % 32;
+	unsigned char starting_tile_y = ((scroll_y + scanline) / 8) % 32;
 
 	// get the x and y pixels to start at in the starting tile
-	unsigned char tile_x = 0;//scroll_x % 8;
-	unsigned char tile_y = 0;// scroll_y % 8;
+	unsigned char tile_x = scroll_x % 8;
+	unsigned char tile_y = scroll_y % 8;
 	//TODO: check to see what tile source to use
 	//printf("Scanline:%d\n", scanline);
 
@@ -115,9 +117,11 @@ void render_scanline_tiles() {
 
 		starting_tile = starting_tile_x + (starting_tile_y * 32);
 
-		unsigned short tile_id = vram[(tile_map - 0x8000) + starting_tile];
+		short tile_id = vram[(tile_map - 0x8000) + starting_tile];
 
-		//memcpy(tile, &vram[(tile_set - 0x8000) + (tile_id * 16)], sizeof(short) * 8);
+		if (tile_set == TILE_SET_0)
+			tile_id += 128; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 		get_tile((tile_set - 0x8000) + (tile_id * 16), tile);
 		unsigned char color;
 		int i, i_start;
@@ -129,19 +133,18 @@ void render_scanline_tiles() {
 		for (i = i_start; i < 8; i++) {
 			color = get_pixel(tile[tile_y] << i);
 
-			screen_buffer[pixel][scanline][1] = color;
-			screen_buffer[pixel][scanline][2] = color;
-			screen_buffer[pixel][scanline][3] = color;
+			screen_buffer[scanline][pixel][1] = color;
+			screen_buffer[scanline][pixel][2] = color;
+			screen_buffer[scanline][pixel][3] = color;
 			pixel++;
 		}
 	}
 }
 
 void draw_screen() {
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glRasterPos2f(-1, 1);
-	glPixelZoom(1, -1);
+	//glRasterPos2f(-1, 1);
+	//glPixelZoom(1, -1);
 	glDrawPixels(160, 144, GL_RGB, GL_UNSIGNED_BYTE, screen_buffer);
 	glfwSwapBuffers(window);
 	glfwPollEvents();
@@ -165,20 +168,20 @@ void gpu_update(int cycles) {
 	
 	unsigned char interrupt = 0;
 
-	if (!(read_8_bit(LCD_CONTROL) & LCD_ENABLED))
-		return;
+	//if (!(read_8_bit(LCD_CONTROL) & LCD_ENABLED))
+	//	return;
 	
 	scanline_cycles += cycles;
 
 	switch (mode) {
 		case LCD_STATUS_ACCESS_OAM:
-			if (scanline_cycles >= 77) {
+			if (scanline_cycles >= 80) {
 				scanline_cycles = 0;
 				mode = LCD_STATUS_ACCESS_VRAM;
 			}
 			break;
 		case LCD_STATUS_ACCESS_VRAM:
-			if (scanline_cycles >= 169) {
+			if (scanline_cycles >= 172) {
 				scanline_cycles = 0;
 				mode = LCD_STATUS_HORIZONTAL_BLANK;
 				render_scanline();
@@ -186,7 +189,7 @@ void gpu_update(int cycles) {
 			}
 			break;
 		case LCD_STATUS_HORIZONTAL_BLANK:
-			if (scanline_cycles >= 201) {
+			if (scanline_cycles >= 204) {
 				scanline_cycles = 0;
 				io[LCD_SCANLINE - 0xFF00] = ++current_scanline;
 				if (current_scanline == 144) {
@@ -199,7 +202,7 @@ void gpu_update(int cycles) {
 				}
 			}
 		case LCD_STATUS_VERTICAL_BLANK:
-			if (scanline_cycles >= 4560) {
+			if (scanline_cycles >= 456) {
 				scanline_cycles = 0;
 				io[LCD_SCANLINE - 0xFF00] = ++current_scanline;
 				if (current_scanline > 153) {
@@ -219,7 +222,6 @@ void gpu_update(int cycles) {
 	mode = (read_8_bit(LCD_STATUS_REG) & ~LCD_STATUS_MODE) | mode;
 	write_8_bit(LCD_STATUS_REG, mode);
 }
-
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
