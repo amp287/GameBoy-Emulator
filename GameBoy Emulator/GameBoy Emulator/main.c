@@ -12,7 +12,7 @@ int main() {
 	// clock cycles per second / FPS
 	// 4194304/60
 	
-	debug_init(1);
+	debug_init(0);
 
 	while(1) {
 		int cycles = cpu_step();

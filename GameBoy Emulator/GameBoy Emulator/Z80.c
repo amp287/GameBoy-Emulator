@@ -78,7 +78,7 @@ int cpu_step() {
 		cpu_print_reg_stack();
 
 	// Remove this after testing
-	if (cpu->pc == 0x040)
+	if (cpu->pc == 0x089)
 		printf("wow i made it\n");
 
 	

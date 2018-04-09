@@ -74,9 +74,9 @@ void test() {
 void get_tile(unsigned short addr, unsigned short *tile) {
 	int i; 
 	
-	for (i = 0; i < 16; i++) {
-		unsigned short shrt = (vram[addr + i] << 8) | vram[addr + (++i)];
-		tile[i/2] = shrt;
+	for (i = 0; i < 8; i++) {
+		unsigned short shrt = read_16_bit(addr + (i * 2));
+		tile[i] = shrt;
 	}
 }
 
@@ -119,10 +119,13 @@ void render_scanline_tiles() {
 
 		short tile_id = vram[(tile_map - 0x8000) + starting_tile];
 
-		if (tile_set == TILE_SET_0)
-			tile_id += 128; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		if (tile_id == 0x19)
+			printf("wow");
 
-		get_tile((tile_set - 0x8000) + (tile_id * 16), tile);
+		//if (tile_set == TILE_SET_0)
+		//	tile_id += 128; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		get_tile((tile_set) + (tile_id * 16), tile);
 		unsigned char color;
 		int i, i_start;
 		if (pixel == 0)
@@ -143,8 +146,8 @@ void render_scanline_tiles() {
 
 void draw_screen() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glRasterPos2f(-1, 1);
-	//glPixelZoom(1, -1);
+	glRasterPos2f(-1, 1);
+	glPixelZoom(1, -1);
 	glDrawPixels(160, 144, GL_RGB, GL_UNSIGNED_BYTE, screen_buffer);
 	glfwSwapBuffers(window);
 	glfwPollEvents();
