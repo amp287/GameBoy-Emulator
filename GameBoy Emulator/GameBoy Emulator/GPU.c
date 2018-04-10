@@ -103,7 +103,7 @@ void render_scanline_tiles() {
 
 	// get the x and y pixels to start at in the starting tile
 	unsigned char tile_x = scroll_x % 8;
-	unsigned char tile_y = scroll_y % 8;
+	unsigned char tile_y = (scroll_y + scanline) % 8;
 	//TODO: check to see what tile source to use
 	//printf("Scanline:%d\n", scanline);
 
@@ -122,8 +122,8 @@ void render_scanline_tiles() {
 		if (tile_id == 0x19)
 			printf("wow");
 
-		//if (tile_set == TILE_SET_0)
-		//	tile_id += 128; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		if (tile_set == TILE_SET_0)
+			tile_id += 128; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 		get_tile((tile_set) + (tile_id * 16), tile);
 		unsigned char color;
