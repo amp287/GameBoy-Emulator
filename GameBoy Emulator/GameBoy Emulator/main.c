@@ -4,9 +4,11 @@
 #include "GPU.h"
 #include "Timer.h"
 #include "Debug.h"
+#include "Cartridge.h"
 
 int main() {
 
+	load_rom(NULL);
 	cpu_init();
 	gpu_init();
 	// clock cycles per second / FPS

@@ -1,7 +1,9 @@
 #include "Memory.h"
 #include "Timer.h"
 #include <string.h>
-#include <stdio.h>
+
+#define ENABLE_EXTERNAL_RAM 0x1FFF
+//#define EN
 
 
 char in_bios;
@@ -41,9 +43,6 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 	// Last step in bios to unmap the boot rom (https://realboyemulator.wordpress.com/2013/01/03/a-look-at-the-game-boy-bootstrap-let-the-fun-begin/)
 	if (addr == 0xFF50 && val == 1)
 		in_bios = 0;
-
-	if (addr == 0xffc3)
-		printf("hello\n");
 
 	if (addr < 0x8000) {
 
@@ -106,15 +105,4 @@ void write_16_bit(unsigned short addr, unsigned short val) {
 
 void load_bios() {
 	in_bios = 1;
-}
-
-//TODO:add rom header check (maybe)
-void load_rom() {
-	FILE *rom = fopen("../Roms/cpu_instrs.gb", "rb");
-	int i = 0;
-
-	//while (fscanf(rom, "%uc", &rom_cartridge[i]) != EOF && i < 0x8000) {
-		fread(&rom_cartridge, 0x8000, 1, rom);
-		//i++;
-	fclose(rom);
 }

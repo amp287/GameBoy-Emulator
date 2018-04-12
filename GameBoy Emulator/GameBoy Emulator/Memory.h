@@ -44,4 +44,3 @@ void write_8_bit(unsigned short addr, unsigned char val);
 void write_16_bit(unsigned short addr, unsigned short val);
 
 void load_bios();
-void load_rom();

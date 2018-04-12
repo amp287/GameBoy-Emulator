@@ -106,6 +106,7 @@ void render_scanline_tiles() {
 	unsigned char tile_y = (scroll_y + scanline) % 8;
 	//TODO: check to see what tile source to use
 	//printf("Scanline:%d\n", scanline);
+	printf("Starting tile y:%x\n", starting_tile_y);
 
 	while(pixel < 160) {
 		unsigned short tile[8];
@@ -116,11 +117,8 @@ void render_scanline_tiles() {
 		starting_tile_x = (starting_tile_x + (pixel / 8)) % 32;
 
 		starting_tile = starting_tile_x + (starting_tile_y * 32);
-
+		
 		short tile_id = vram[(tile_map - 0x8000) + starting_tile];
-
-		if (tile_id == 0x19)
-			printf("wow");
 
 		if (tile_set == TILE_SET_0)
 			tile_id += 128; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

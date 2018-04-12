@@ -36,8 +36,6 @@ void cpu_init() {
 	//reg_pointers[12] = &cpu->;
 	reg_pointers[15] = (unsigned char*)&cpu->sp;
 	load_bios();
-	//remove this after TEST
-	load_rom();
 	cpu_reset();
 }
 
@@ -78,7 +76,7 @@ int cpu_step() {
 		cpu_print_reg_stack();
 
 	// Remove this after testing
-	if (cpu->pc == 0x089)
+	if (cpu->pc == 0x0468)
 		printf("wow i made it\n");
 
 	
