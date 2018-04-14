@@ -1,24 +1,29 @@
 #include "Memory.h"
 #include "Timer.h"
+#include "Cartridge.h"
 #include <string.h>
+#include <stdio.h>
 
-#define ENABLE_EXTERNAL_RAM 0x1FFF
-//#define EN
-
+#define ENABLE_EXTERNAL_RAM 0x2000
+#define SWITCH_ROM_BANK 0x4000
+#define SWITCH_RAM_BANK_ROM_SET 0x6000
+#define SWITCH_CART_MODE 0x8000
 
 char in_bios;
 
 unsigned char read_8_bit(unsigned short addr) {
-	if (addr < 0x8000) {
+	if (addr < 0x4000) {
 		if (in_bios && addr < 0x100)
 			return bios[addr];
-		return rom_cartridge[addr];
+		return read_rom_bank_8_bit(addr, 1);
 	}
-		
+	
+	if (addr < 0x8000)
+		return read_rom_bank_8_bit(addr - 0x4000, 0);
 	if (addr < 0xA000)
 		return vram[addr - 0x8000];
 	if (addr < 0xC000)
-		return ext_ram[addr - 0xA000];
+		return read_ram_bank_8_bit(addr - 0x8000);
 	if (addr < 0xE000)
 		return internal_ram[addr - 0xC000];
 	if (addr < 0xFE00)
@@ -44,17 +49,30 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 	if (addr == 0xFF50 && val == 1)
 		in_bios = 0;
 
-	if (addr < 0x8000) {
+	if (addr < ENABLE_EXTERNAL_RAM) {
 
-		rom_cartridge[addr] = val;
+		enable_disable_cart_ram(val);
+
+	} else if(addr < SWITCH_ROM_BANK) {
+		
+		switch_rom_bank(val);
+
+	} else if (addr < SWITCH_RAM_BANK_ROM_SET) {
+
+		switch_ram_bank_rom_set(val);
+
+	} else if (addr < SWITCH_CART_MODE) {
+
+		switch_cart_mode(val);
 
 	} else if (addr < 0xA000) {
-
+		if (addr == 0x9800)
+			printf("Wewow\n");
 		vram[addr - 0x8000] = val;
 
 	} else if (addr < 0xC000) {
 
-		ext_ram[addr - 0xA000] = val;
+		write_ram_bank_8_bit(addr - 0xA000, val);
 
 	} else if (addr < 0xE000) {
 

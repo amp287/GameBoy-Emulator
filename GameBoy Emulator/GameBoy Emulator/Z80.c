@@ -8,6 +8,8 @@ CPU *cpu;
 
 unsigned char *reg_pointers[16];
 
+int print = 0;
+
 typedef struct INSTRUCTION_REGISTER {
 	int instruction_index;
 	unsigned char is_cb;
@@ -47,7 +49,7 @@ void cpu_print_reg_stack() {
 	//	printf("%x ", read_8_bit(i));
 	fprintf(debug, "\n\n");
 
-	printf("\t\tRegisters: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
+	printf("\t\tRegisters: AF:%x BC:%x DE:%x\n\t\tHL:%x\n", cpu->af, cpu->bc, cpu->de, cpu->hl);
 	printf("\t\tStack:%x", cpu->sp);
 	//for (i = 0xfffd; i >= cpu->sp; i--)
 	//	printf("%x ", read_8_bit(i));
@@ -56,7 +58,7 @@ void cpu_print_reg_stack() {
 
 int cpu_step() {
 	int cycles = 0;
-	if (debug) {
+	if (debug && print) {
 		//fprintf(debug, "----------------------------------------\n");
 		//fprintf(debug, "pc:%04x\n", cpu->pc);
 		printf("----------------------------------------\n");
@@ -72,12 +74,15 @@ int cpu_step() {
 	}
 
 	
-	if(debug)
+	if(debug && print)
 		cpu_print_reg_stack();
 
 	// Remove this after testing
-	if (cpu->pc == 0x0468)
+	if (cpu->pc == 0XC338) {
 		printf("wow i made it\n");
+		print = 1;
+	}
+		
 
 	
 	return cycles;
@@ -127,7 +132,7 @@ int cpu_execute() {
 		getchar();
 		return -1;
 	}
-	if (debug) {
+	if (debug && print) {
 	printf("\t\tcpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
 		printf("%x %x \n", ir.first_param, ir.second_param);
 	}
@@ -389,7 +394,7 @@ void PUSH_nn(unsigned short nn, unsigned short NA) {
 
 	switch (nn) {
 		case AF:
-			val = cpu->af;
+			val = cpu->af & (0xFFF0);
 			break;
 		case BC:
 			val = cpu->bc;
@@ -410,7 +415,8 @@ void POP_nn(unsigned short nn, unsigned short NA) {
 
 	switch (nn) {
 		case AF:
-			cpu->af = stack_val;
+			//f should only store top 4 bits
+			cpu->af = stack_val & 0xFFF0;
 			break;
 		case BC:
 			cpu->bc = stack_val;
@@ -685,8 +691,21 @@ void DEC_n(unsigned short NA, unsigned short n) {
 }
 
 //16-Bit Arithmetic
-void ADD_HL_n(unsigned short HL, unsigned short n) {
-		n = *reg_pointers[n];
+void ADD_HL_n(unsigned short NA, unsigned short n) {
+		switch (n) {
+			case AF:
+				// f bottom bits shouldnt be changed
+				n = cpu->af & 0xFFF0;
+				break;
+			case BC:
+				n = cpu->bc;
+				break;
+			case DE:
+				n = cpu->de;
+				break;
+			case HL:
+				n = cpu->hl;
+		}
 
 		clear_flag(SUBTRACT_FLAG);
 
@@ -1016,18 +1035,21 @@ void RRC_n(unsigned short n, unsigned short NA) {
 
 void RR_n(unsigned short n, unsigned short NA) {
 	unsigned char num;
+	unsigned char old;
 
 	if (n == HL)
 		num = read_8_bit(cpu->hl);
 	else
 		num = *reg_pointers[n];
 
+	old = num & 1;
+
 	num >>= 1;
 
 	if (cpu->f & CARRY_FLAG)
 		num |= 0x80;
 
-	if (num & 0x01)
+	if (old)
 		set_flag(CARRY_FLAG);
 	else
 		clear_flag(CARRY_FLAG);
@@ -1105,9 +1127,9 @@ void SRL_n(unsigned short n, unsigned short NA) {
 		num = *reg_pointers[n];
 
 	if (num & 0x01)
-		clear_flag(CARRY_FLAG);
-	else
 		set_flag(CARRY_FLAG);
+	else
+		clear_flag(CARRY_FLAG);
 
 	num >>= 1;
 

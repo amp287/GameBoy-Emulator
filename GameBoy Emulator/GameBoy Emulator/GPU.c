@@ -106,7 +106,6 @@ void render_scanline_tiles() {
 	unsigned char tile_y = (scroll_y + scanline) % 8;
 	//TODO: check to see what tile source to use
 	//printf("Scanline:%d\n", scanline);
-	printf("Starting tile y:%x\n", starting_tile_y);
 
 	while(pixel < 160) {
 		unsigned short tile[8];

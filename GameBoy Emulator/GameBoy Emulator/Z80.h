@@ -206,7 +206,7 @@ static INSTR opcodes[] = {
 	{"DEC C", DEC_n, NA, C, 4},			//0x0D
 	{"LD C, n", LD_nn_n, C, READ_8, 8},		//0x0E
 	{"RRCA", RRCA, A, NA, 4},			//0x0F
-	{"STOP", NULL, NA, NA , 4},			//0x10
+	{"STOP", STOP, NA, NA , 4},			//0x10
 	{"LD DE, nn", LD_n_nn, DE, READ_16, 12},	//0x11
 	{"LD DE, A", LD_n_A, NA, DE, 8},		//0x12
 	{"INC DE", INC_nn, DE, NA, 8},		//0x13

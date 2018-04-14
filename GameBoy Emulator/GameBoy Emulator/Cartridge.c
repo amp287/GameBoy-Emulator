@@ -18,7 +18,7 @@ char name[17];
 unsigned char cartridge_type;
 unsigned char rom_size;
 unsigned char ram_size;
-unsigned char (*rom_banks)[0x8000];
+unsigned char (*rom_banks)[0x4000];
 unsigned char (*ram_banks)[0x2000];
 unsigned short current_rom_bank;
 
@@ -26,11 +26,15 @@ unsigned short current_rom_bank;
 unsigned char current_rom_set;
 unsigned char current_ram_bank;
 unsigned char current_mode;
+unsigned char ram_enabled;
 
 int set_rom_size(unsigned char size_code) {
+	rom_size = -1;
+	rom_banks = NULL;
+
 	if (size_code < 7){
 		rom_size = 2 << size_code;
-		rom_banks = malloc(sizeof(unsigned char[0x8000]) * rom_size);
+		rom_banks = malloc(sizeof(unsigned char[0x4000]) * rom_size);
 	} else {
 		printf("ROM SIZE UNSUPPORTED:%x\n", size_code);
 		return -1;
@@ -39,33 +43,45 @@ int set_rom_size(unsigned char size_code) {
 	return 0;
 }
 
-void set_ram_size(unsigned char size_code) {
+int set_ram_size(unsigned char size_code) {
+	ram_size = -1;
+	ram_banks = NULL;
+
 	switch (size_code) {
 		case 0:
 			ram_size = 0;
-			return;
+			break;
 		case 1:
 		case 2:
 			ram_size = 1;
-			return;
+			break;
 		case 3:
 			ram_size = 4;
-			return;
+			break;
 		case 4:
 			ram_size = 16;
 	}
 
+	if (ram_size == -1)
+		return -1;
+
+	if (ram_size == 0)
+		return 0;
+
 	ram_banks = malloc(sizeof(unsigned char[0x2000]) * ram_size);
+	
+	return 0;
 }
 
 int load_rom(char *path) {
 	FILE *rom = fopen("../Roms/cpu_instrs.gb", "rb");
-	unsigned char buffer[0x8000];
+	unsigned char buffer[0x4000];
 	int i = 0;
 
-	fread(&buffer, 0x8000, 1, rom);
+	fread(buffer, 0x4000, 1, rom);
 
 	memcpy(name, &buffer[0x134], 16);
+
 	cartridge_type = buffer[0x147];
 
 	if (set_rom_size(buffer[0x148]) != 0) {
@@ -73,7 +89,19 @@ int load_rom(char *path) {
 		return -1;
 	}
 
+	if (set_ram_size(buffer[0x149]) != 0) {
+		free(rom_banks);
+		fclose(rom);
+		return -1;
+	}
+
+	memcpy(rom_banks[0], buffer, 0x4000);
+
+	for (i = 1; i < rom_size; i++) {
+		fread(rom_banks[i], 0x4000, 1, rom);
+	}
 	
+	current_mode = CART_MODE_MBC1_16MBIT_8KB;
 
 	fclose(rom);
 	return 0;
@@ -115,36 +143,42 @@ void switch_rom_set(unsigned char set) {
 	}
 }
 
-// switches the ram bank or rom set depending on the Cartridge type and mode
 void switch_ram_bank_rom_set(unsigned char bank) {
-	if(current_mode == CART_MODE_MBC1_4MBIT_32KB)
+	if (current_mode == CART_MODE_MBC1_4MBIT_32KB)
 		current_ram_bank = bank;
+	else if (current_mode == CART_MODE_MBC1_16MBIT_8KB)
+		switch_rom_set(bank);
 }
 
-unsigned char read_rom_bank_8_bit(unsigned short addr) {
-		return rom_banks[current_rom_bank][addr];
-}
+unsigned char read_rom_bank_8_bit(unsigned short addr, int bank_0) {
+	if (bank_0)
+		return rom_banks[0][addr];
 
-unsigned short read_rom_bank_16_bit(unsigned short addr) {
-	return read_rom_bank_8_bit(addr) | (read_rom_bank_8_bit(addr + 1) << 8);
+	return rom_banks[current_rom_bank][addr];
 }
 
 unsigned char read_ram_bank_8_bit(unsigned short addr) {
-	return ram_banks[current_ram_bank][addr];
-}
-
-unsigned short read_ram_bank_16_bit(unsigned short addr) {
-	return read_ram_bank_8_bit(addr) | (read_ram_bank_8_bit(addr + 1) << 8);
+	if (ram_enabled && ram_size != 0)
+		return ram_banks[current_ram_bank][addr];
+	else
+		return 0;
 }
 
 void write_ram_bank_8_bit(unsigned short addr, unsigned char val) {
-	ram_banks[current_ram_bank][addr] = val;
+	if (ram_enabled && ram_size != 0)
+		ram_banks[current_ram_bank][addr] = val;
 }
 
-void write_ram_bank_16_bit(unsigned short addr, unsigned short val) {
-	unsigned char one = (unsigned char)(val & 0x00ff);
-	unsigned char two = (unsigned char)(val >> 8);
+void enable_disable_cart_ram(unsigned char val) {
+	if (val == 0x0A)
+		ram_enabled = 1;
+	else
+		ram_enabled = 0;
+}
 
-	write__ram_bank_8_bit(addr, one);
-	write_ram__bank_8_bit(addr + 1, two);
+void switch_cart_mode(unsigned char mode) {
+	if (mode)
+		current_mode = CART_MODE_MBC1_16MBIT_8KB;
+	else
+		current_mode = CART_MODE_MBC1_4MBIT_32KB;
 }

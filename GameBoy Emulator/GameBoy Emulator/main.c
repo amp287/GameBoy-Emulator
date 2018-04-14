@@ -8,7 +8,11 @@
 
 int main() {
 
-	load_rom(NULL);
+	if (load_rom(NULL) != 0) {
+		printf("Error loading rom\n");
+		getchar();
+		return -1;
+	}
 	cpu_init();
 	gpu_init();
 	// clock cycles per second / FPS
