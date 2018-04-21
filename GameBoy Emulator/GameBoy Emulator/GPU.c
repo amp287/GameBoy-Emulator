@@ -133,9 +133,9 @@ void render_scanline_tiles() {
 		for (i = i_start; i < 8; i++) {
 			color = get_pixel(tile[tile_y] << i);
 
+			screen_buffer[scanline][pixel][0] = color;
 			screen_buffer[scanline][pixel][1] = color;
 			screen_buffer[scanline][pixel][2] = color;
-			screen_buffer[scanline][pixel][3] = color;
 			pixel++;
 		}
 	}

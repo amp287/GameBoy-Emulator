@@ -47,13 +47,13 @@ void cpu_print_reg_stack() {
 	//fprintf(debug, "\t\tStack:%x", cpu->sp);
 	//for (i = 0xfffd; i >= cpu->sp; i--)
 	//	printf("%x ", read_8_bit(i));
-	fprintf(debug, "\n\n");
+	//fprintf(debug, "\n\n");
 
-	printf("\t\tRegisters: AF:%x BC:%x DE:%x\n\t\tHL:%x\n", cpu->af, cpu->bc, cpu->de, cpu->hl);
-	printf("\t\tStack:%x", cpu->sp);
+	debug_log("\t\tRegisters: AF:%x BC:%x DE:%x\n\t\tHL:%x\n", cpu->af, cpu->bc, cpu->de, cpu->hl);
+	debug_log("\t\tStack:%x", cpu->sp);
 	//for (i = 0xfffd; i >= cpu->sp; i--)
 	//	printf("%x ", read_8_bit(i));
-	printf("\n\n");
+	debug_log("\n\n");
 }
 
 int cpu_step() {
@@ -61,10 +61,12 @@ int cpu_step() {
 	if (debug && print) {
 		//fprintf(debug, "----------------------------------------\n");
 		//fprintf(debug, "pc:%04x\n", cpu->pc);
-		printf("----------------------------------------\n");
-		printf("pc:%04x\n", cpu->pc);
+		debug_log("----------------------------------------\n");
+		debug_log("pc:%04x\n", cpu->pc);
 	}
 
+	//if (cpu->pc == 0xc066 && cpu->af == 0xa250 && cpu->bc == 0x1d14)
+		//printf("WHOA\n");
 
 	if (!halt_flag || !stop_flag) {
 		cycles = cpu_fetch();
@@ -78,7 +80,7 @@ int cpu_step() {
 		cpu_print_reg_stack();
 
 	// Remove this after testing
-	if (cpu->pc == 0XC338) {
+	if (cpu->pc == 0Xc4af) {
 		printf("wow i made it\n");
 		print = 1;
 	}
@@ -133,8 +135,8 @@ int cpu_execute() {
 		return -1;
 	}
 	if (debug && print) {
-	printf("\t\tcpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
-		printf("%x %x \n", ir.first_param, ir.second_param);
+		//printf("\t\tcpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
+		//printf("%x %x \n", ir.first_param, ir.second_param);
 	}
 	(ir.execute)(ir.first_param, ir.second_param);
 
@@ -804,7 +806,7 @@ void SWAP_n(unsigned short n, unsigned short NA) {
 }
 
 void DAA(unsigned short NA_1, unsigned short NA_2) {
-	unsigned char s = cpu->a;
+	unsigned short s = cpu->a;
 
 	if (cpu->f & SUBTRACT_FLAG) {
 		if (cpu->f & HALF_CARRY_FLAG) 
@@ -818,7 +820,7 @@ void DAA(unsigned short NA_1, unsigned short NA_2) {
 			s += 0x60;
 	}
 
-	cpu->a = s;
+	cpu->a = (unsigned char)s;
 	clear_flag(HALF_CARRY_FLAG);
 
 	if (cpu->a)

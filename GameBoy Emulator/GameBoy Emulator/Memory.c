@@ -66,8 +66,7 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		switch_cart_mode(val);
 
 	} else if (addr < 0xA000) {
-		if (addr == 0x9800)
-			printf("Wewow\n");
+
 		vram[addr - 0x8000] = val;
 
 	} else if (addr < 0xC000) {
@@ -107,8 +106,6 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		zero_pg_ram[addr - 0xFF80] = val;
 
 	}
-		
-
 }
 
 // Assumes that when type casting higher order bits are discarded
