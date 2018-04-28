@@ -42,7 +42,7 @@ void change_freq(int freq) {
 	switch (freq) {
 		case TIMER_CONTROL_FREQ_16384:
 			current_freq = TIMER_CONTROL_FREQ_16384;
-			timer_cycles = CPU_CLOCK_SPEED/16384;
+			timer_cycles = CPU_CLOCK_SPEED / 16384;
 			break;
 		case TIMER_CONTROL_FREQ_65536:
 			current_freq = TIMER_CONTROL_FREQ_65536;

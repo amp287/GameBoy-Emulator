@@ -8,7 +8,12 @@ CPU *cpu;
 
 unsigned char *reg_pointers[16];
 
-int print = 0;
+int interrupt_ticks_to_add;
+int print = 1;
+int instr_count = 0;
+
+//remove later
+int testnum = 0;
 
 typedef struct INSTRUCTION_REGISTER {
 	int instruction_index;
@@ -30,73 +35,63 @@ void cpu_init() {
 	reg_pointers[4] = &cpu->e;
 	reg_pointers[5] = &cpu->h;
 	reg_pointers[6] = &cpu->l;
-	reg_pointers[7] = (unsigned char*)&cpu->af;
-	reg_pointers[8] = (unsigned char*)&cpu->bc;
-	reg_pointers[9] = (unsigned char*)&cpu->de;
-	reg_pointers[10] = (unsigned char*)&cpu->hl;
-	//reg_pointers[11] = &cpu->;
-	//reg_pointers[12] = &cpu->;
-	reg_pointers[15] = (unsigned char*)&cpu->sp;
+
 	load_bios();
 	cpu_reset();
 }
 
 void cpu_print_reg_stack() {
-	int i;
-	//fprintf(debug, "\t\tRegisters: A:%x B:%x C:%x\n\t\tD:%x E:%x H:%x L:%x\n", cpu->a, cpu->b, cpu->c, cpu->d, cpu->e, cpu->h, cpu->l);
-	//fprintf(debug, "\t\tStack:%x", cpu->sp);
-	//for (i = 0xfffd; i >= cpu->sp; i--)
-	//	printf("%x ", read_8_bit(i));
-	//fprintf(debug, "\n\n");
-
 	debug_log("\t\tRegisters: AF:%x BC:%x DE:%x\n\t\tHL:%x\n", cpu->af, cpu->bc, cpu->de, cpu->hl);
-	debug_log("\t\tStack:%x", cpu->sp);
-	//for (i = 0xfffd; i >= cpu->sp; i--)
-	//	printf("%x ", read_8_bit(i));
+	debug_log("\t\tStack:%x instr_count:%d cycles:%ld", cpu->sp, instr_count, cpu->clock_t);
 	debug_log("\n\n");
 }
 
 int cpu_step() {
-	int cycles = 0;
-	if (debug && print) {
-		//fprintf(debug, "----------------------------------------\n");
-		//fprintf(debug, "pc:%04x\n", cpu->pc);
+	cpu->t = 0;
+	cpu->m = 0;
+
+	if (print) {
 		debug_log("----------------------------------------\n");
 		debug_log("pc:%04x\n", cpu->pc);
 	}
 
-	//if (cpu->pc == 0xc066 && cpu->af == 0xa250 && cpu->bc == 0x1d14)
-		//printf("WHOA\n");
-
 	if (!halt_flag || !stop_flag) {
-		cycles = cpu_fetch();
+		cpu->t += cpu_fetch();
+
+		cpu->t += interrupt_ticks_to_add;
+		interrupt_ticks_to_add = 0;
+
+		gpu_update(cpu->t);
+
 		if (cpu_execute()) {
 			return -1;
 		}
+
+		cpu->m = cpu->t / 4;
 	}
 
-	
-	if(debug && print)
+	instr_count++;
+
+	cpu->clock_t += cpu->t;
+	cpu->clock_m += cpu->m;
+
+	if(print)
 		cpu_print_reg_stack();
 
-	// Remove this after testing
-	if (cpu->pc == 0Xc4af) {
-		printf("wow i made it\n");
-		print = 1;
-	}
-		
+	// Remove this after testing 0xc0c2 <- called before every test
+	if (instr_count == 25000) {
 
-	
-	return cycles;
+		//if (++testnum == 1)
+			print = 1;
+	}
+	return cpu->t;
 }
 
-int cpu_fetch() {
-	if (cpu->pc > 0x8000){
-		//printf("ERROR over 0x8000\n");
-		//getchar();
-	}
+long cpu_fetch() {
 	int index = read_8_bit(cpu->pc++);
 	INSTR *map;
+	
+	cpu->t = 0;
 
 	if (index == 0xCB) {
 		map = opcodesCB;
@@ -143,7 +138,7 @@ int cpu_execute() {
 	return 0;
 }
 
-int check_interrupts() {
+void check_interrupts() {
 	unsigned char enabled = read_8_bit(INTERRUPT_ENABLE);
 	unsigned char flags = read_8_bit(INTERRUPT_FLAGS);
 
@@ -184,11 +179,12 @@ int check_interrupts() {
 		}
 
 		write_8_bit(INTERRUPT_FLAGS, flags);
+		
 		// add 12 ticks
-		return 12;
+		interrupt_ticks_to_add = 12;
+		return;
 	}
-	
-	return 0;
+	interrupt_ticks_to_add = 0;
 }
 
 void cpu_reset() {
@@ -202,9 +198,9 @@ void cpu_reset() {
 	cpu->l = 0x00;
 	cpu->sp = 0xFFFe;
 	cpu->pc = 0x0;
-	
-	//write_8_bit(LCD_CONTROL, 91);
-	//write_8_bit(LCD_STATUS_REG, 0x53);
+	cpu->clock_m = 0;
+	cpu->clock_t = 0;
+	interrupt_ticks_to_add = 0;
 
 	write_8_bit(0xFF05, 0);
 	write_8_bit(0xFF06, 0);
@@ -230,6 +226,7 @@ void cpu_reset() {
 	write_8_bit(0xFF40, 0x91);
 	write_8_bit(0xFF42, 0x00);
 	write_8_bit(0xFF43, 0x00);
+	write_8_bit(0xFF44, 0x00);
 	write_8_bit(0xFF45, 0x00);
 	write_8_bit(0xFF47, 0xFC);
 	write_8_bit(0xFF48, 0xFF);
@@ -472,6 +469,11 @@ void ADC_A_n(unsigned short type, unsigned short n) {
 
 	n += cpu->f & CARRY_FLAG ? 1 : 0;
 
+	if (((cpu->a & 0x0F) + (n & 0x0F)) > 0x0F)
+		set_flag(HALF_CARRY_FLAG);
+	else
+		clear_flag(HALF_CARRY_FLAG);
+
 	unsigned int result = cpu->a + n;
 
 	if (result & 0xFF00)
@@ -485,11 +487,6 @@ void ADC_A_n(unsigned short type, unsigned short n) {
 		clear_flag(ZERO_FLAG);
 	else
 		set_flag(ZERO_FLAG);
-
-	if (((cpu->a & 0x0F) + (n & 0x0F)) > 0x0F)
-		set_flag(HALF_CARRY_FLAG);
-	else
-		clear_flag(HALF_CARRY_FLAG);
 
 }
 
@@ -1221,8 +1218,10 @@ void JP_cc_nn(unsigned short cc, unsigned short nn) {
 			;
 	}
 
-	if (jump)
+	if (jump) {
 		cpu->pc = nn;
+		cpu->t += 4;
+	}
 }
 
 void JP_HL(unsigned short NA_1, unsigned short NA_2) {
@@ -1254,8 +1253,10 @@ void JR_cc_n(unsigned short cc, unsigned short n) {
 		;
 	}
 
-	if (jump)
+	if (jump){
 		cpu->pc += (signed char)n;
+		cpu->t += 4;
+	}
 }
 
 //Calls
@@ -1286,7 +1287,11 @@ void CALL_cc_nn(unsigned short cc, unsigned short nn) {
 		//Error here
 		;
 	}
-	CALL_nn(0, nn);
+	if (jump) {
+		cpu->t += 12;
+		CALL_nn(0, nn);
+	}
+	
 }
 
 //Restarts 
@@ -1325,8 +1330,11 @@ void RET_cc(unsigned short cc, unsigned short NA) {
 		;
 	}
 
-	if (ret)
+	if (ret) {
 		RET(0, 0);
+		cpu->t += 12;
+	}
+		
 }
 
 void RETI(unsigned short NA_1, unsigned short NA_2) {

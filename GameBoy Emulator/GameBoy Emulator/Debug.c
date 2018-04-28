@@ -7,7 +7,7 @@ int lines, file_num;
 
 void debug_log(const char *fmt, ...) {
 
-	if (debug == NULL && file_num > MAX_FILES)
+	if (debug == NULL || file_num > MAX_FILES)
 		return;
 
 	if (lines > LINE_MAX) {

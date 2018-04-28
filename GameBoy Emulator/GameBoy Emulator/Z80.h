@@ -28,7 +28,7 @@ typedef struct {
 	// CPU total time
 	long clock_m, clock_t;
 
-	// Last instruction time 
+	// Last instruction time m -> machine cycles, t -> clock cycles
 	long m, t;
 
 	unsigned char flags;
@@ -73,9 +73,9 @@ typedef struct {
 void cpu_init();
 void cpu_reset();
 int cpu_step();
-int cpu_fetch();
+long cpu_fetch();
 int cpu_execute();
-int check_interrupts();
+void check_interrupts();
 
 //Function Pointer
 // arg1 = Regval (for most instructions put this NA unless it takes 2 registers)
@@ -214,7 +214,7 @@ static INSTR opcodes[] = {
 	{"DEC D", DEC_n, NA, D, 4},			//0x15
 	{"LD D, n", LD_nn_n, D, READ_8, 8},		//0x16
 	{"RLA", RLA, A, NA, 4},			//0x17
-	{"JR n", JR_n, NA, READ_8, 4},			//0x18
+	{"JR n", JR_n, NA, READ_8, 12},			//0x18
 	{"ADD HL, DE", ADD_HL_n, HL, DE, 8},	//0x19
 	{"LD A, DE", LD_A_n, A, DE, 8},		//0x1A
 	{"DEC DE", DEC_nn, DE, NA, 8},		//0x1B
@@ -385,19 +385,19 @@ static INSTR opcodes[] = {
 	{"RET NZ", RET_cc, NZ, NA, 8},		//0xC0		//NZ means check for not zero
 	{"POP BC", POP_nn, BC, NA, 12},		//0xC1
 	{"JP NZ, nn", JP_cc_nn, NZ, READ_16, 12},	//0xC2
-	{"JP nn", JP_nn, NA, READ_16 , 12},	//0xC3
+	{"JP nn", JP_nn, NA, READ_16 , 16},	//0xC3
 	{"CALL NZ, nn", CALL_cc_nn, NZ, READ_16, 12},//0xC4
 	{"PUSH BC", PUSH_nn, BC, NA, 16},	//0xC5
 	{"ADD A, n", ADD_A_n, READ_8, READ_8, 8},	//0xC6
-	{"RST 0", RST_n, 0, NA, 32},		//0xC7
+	{"RST 0", RST_n, 0, NA, 16},		//0xC7
 	{"RET Z", RET_cc, Z, NA , 8},		//0xC8
-	{"RET", RET, NA, NA , 8},		//0xC9
+	{"RET", RET, NA, NA , 16},		//0xC9
 	{"JP Z, nn", JP_cc_nn, Z, READ_16, 12},	//0xCA
 	{"Ext Ops (CB)", NULL, NA, NA, 4},	//0xCB
 	{"CALL Z, nn", CALL_cc_nn, Z, READ_16, 12},	//0xCC
-	{"CALL nn", CALL_nn, NA, READ_16, 12},		//0xCD
+	{"CALL nn", CALL_nn, NA, READ_16, 24},		//0xCD
 	{"ADC A, n", ADC_A_n, READ_8, READ_8, 8},		//0xCE
-	{"RST 8", RST_n, 8, NA, 32},		//0xCF
+	{"RST 8", RST_n, 8, NA, 16},		//0xCF
 	{"RET NC", RET_cc, NC, NA, 8},		//0xD0
 	{"POP DE", POP_nn, DE, NA, 12},		//0xD1
 	{"JP NC, nn", JP_cc_nn, NC, READ_16, 12},	//0xD2
@@ -405,15 +405,15 @@ static INSTR opcodes[] = {
 	{"CALL NC, nn", CALL_cc_nn, NC, READ_16, 12},	//0xD4
 	{"PUSH DE", PUSH_nn, DE, NA, 16},		//0xD5
 	{"SUB A, n", SUB_n, READ_8, READ_8, 8},		//0xD6
-	{"RST 10", RST_n, 0x10, NA, 32},		//0xD7
+	{"RST 10", RST_n, 0x10, NA, 16},		//0xD7
 	{"RET C", RET_cc, C, NA, 8},			//0xD8
-	{"RETI", RETI, NA, NA, 8},			//0xD9
+	{"RETI", RETI, NA, NA, 16},			//0xD9
 	{"JP C, nn", JP_cc_nn, C, READ_16, 12},		//0xDA
 	{"XX", NULL, NA, NA, 4},			//0xDB
 	{"CALL cc, nn", CALL_cc_nn, C, READ_16, 12},		//0xDC
 	{"XX", NULL, NA, NA, 4},			//0xDD
 	{"SBC A, n", SBC_A_n, READ_8, READ_8, 8},		//0xDE
-	{"RST 18", RST_n, 0x18, NA, 32},		//0xDF
+	{"RST 18", RST_n, 0x18, NA, 16},		//0xDF
 	{"LDH n, A", LDH_n_A, NA, READ_8, 12},		//0xE0
 	{"POP HL", POP_nn, HL, NA, 12},		//0xE1
 	{"LD (C), A", LD_C_A, C, A, 8},		//0xE2
@@ -421,7 +421,7 @@ static INSTR opcodes[] = {
 	{"XX", NULL, NA, NA , 4},			//0xE4
 	{"PUSH HL", PUSH_nn, HL, NA, 16},		//0xE5
 	{"AND n", AND_n, READ_8, READ_8, 8},		//0xE6
-	{"RST 20", RST_n, 0x20, NA, 32},		//0xE7
+	{"RST 20", RST_n, 0x20, NA, 16},		//0xE7
 	{"ADD SP, n", ADD_SP_n, SP, READ_8, 16},	//0xE8
 	{"JP HL", JP_HL, HL, NA, 4},		//0xE9
 	{"LD nn, A", LD_n_A, READ_16, READ_16, 16},		//0xEA
@@ -429,7 +429,7 @@ static INSTR opcodes[] = {
 	{"XX", NULL, NA, NA , 4},			//0xEC
 	{"XX", NULL, NA, NA , 4},			//0xED
 	{"XOR n", XOR_n, READ_8, READ_8, 8},		//0xEE
-	{"RST 28", RST_n, 0x28, NA, 32},		//0xEF
+	{"RST 28", RST_n, 0x28, NA, 16},		//0xEF
 	{"LDH A, n", LDH_A_n, A, READ_8, 12},		//0xF0
 	{"POP AF", POP_nn, AF, NA, 12},		//0xF1
 	{"LD A, (C)", LD_A_C, A, C, 8},			//0xF2
@@ -437,7 +437,7 @@ static INSTR opcodes[] = {
 	{"XX", NULL, NA, NA , 4},			//0xF4
 	{"PUSH AF", PUSH_nn, AF, NA, 16},		//0xF5
 	{"OR n", OR_n, READ_8, READ_8, 8},			//0xF6
-	{"RST 30", RST_n, 0x30, NA, 32},		//0xF7
+	{"RST 30", RST_n, 0x30, NA, 16},		//0xF7
 	{"LDHL SP, n", LDHL_SP_n, SP, READ_8, 12},	//0xF8
 	{"LD SP, HL", LD_SP_HL, SP, HL, 8},	//0xF9
 	{"LD A, nn", LD_A_nn, A, READ_16, 16},		//0xFA
@@ -445,7 +445,7 @@ static INSTR opcodes[] = {
 	{"XX", NULL, NA, NA , 4},			//0xFC
 	{"XX", NULL, NA, NA , 4},			//0xFD
 	{"CP n", CP_n, READ_8, READ_8, 8},			//0xFE
-	{"RST 38", RST_n, 0x28, NA, 32},		//0xFF
+	{"RST 38", RST_n, 0x28, NA, 16},		//0xFF
 };
 
 static INSTR opcodesCB[] = {

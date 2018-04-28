@@ -11,13 +11,13 @@
 #define WINDOW_X 0xFF4B
 #define TILE_SIZE 16
 
-// It takes the GPU 456 cycles to draw one scanline
-int scanline_cycles;
 int quit;
 GLFWwindow* window;
 GLuint readFboId;
 GLuint renderedTexture;
 int x = 0;
+// It takes the GPU 456 cycles to draw one scanline
+int scanline_cycles;
 
 unsigned char screen_buffer[144][160][3];
 
@@ -46,29 +46,6 @@ unsigned char get_pixel(unsigned short tile_row) {
 		return 96;
 	else
 		return 0; 
-}
-
-void test() {
-	unsigned short tilemap = TILE_MAP_0 - 0x8000;
-	unsigned short black_tile[8], white_tile[8];
-	int i;
-	
-	for (i = 0; i < 8; i++)
-	{
-		black_tile[i] = 0xFFFF;
-		white_tile[i] = 0x0000;
-	}
-	//printf("SIZE:%d\n", sizeof(black_tile));
-	memcpy(vram, (unsigned char*)black_tile, 16);
-	memcpy(&vram[16], (unsigned char*)white_tile, 16);
-
-	for (i = 0; i < 1024; i++) {
-		if (i % 2)
-			vram[tilemap + i] = 0;
-		else
-			vram[tilemap + i] = 1;
-	}
-
 }
 
 void get_tile(unsigned short addr, unsigned short *tile) {
@@ -147,7 +124,6 @@ void draw_screen() {
 	glPixelZoom(1, -1);
 	glDrawPixels(160, 144, GL_RGB, GL_UNSIGNED_BYTE, screen_buffer);
 	glfwSwapBuffers(window);
-	glfwPollEvents();
 }
 
 void render_scanline() {
@@ -165,48 +141,60 @@ void gpu_update(int cycles) {
 	unsigned char current_scanline = read_8_bit(LCD_SCANLINE);
 	unsigned char mode = read_8_bit(LCD_STATUS_REG) & LCD_STATUS_MODE;
 	unsigned char compare = read_8_bit(LCD_SCANLINE_COMPARE);
-	
 	unsigned char interrupt = 0;
 
-	//if (!(read_8_bit(LCD_CONTROL) & LCD_ENABLED))
-	//	return;
+	glfwPollEvents();
+
+	if (!(read_8_bit(LCD_CONTROL) & LCD_ENABLED)) {
+		io[LCD_SCANLINE - 0xFF00] = 0;
+		// set to horizontal blank
+		write_8_bit(LCD_STATUS_REG, (read_8_bit(LCD_STATUS_REG) & ~LCD_STATUS_MODE) | LCD_STATUS_HORIZONTAL_BLANK);
+		return;
+	}
 	
 	scanline_cycles += cycles;
 
 	switch (mode) {
 		case LCD_STATUS_ACCESS_OAM:
 			if (scanline_cycles >= 80) {
-				scanline_cycles = 0;
+				scanline_cycles -= 80;
+				debug_log("ACCESS VRAM\n");
 				mode = LCD_STATUS_ACCESS_VRAM;
 			}
 			break;
 		case LCD_STATUS_ACCESS_VRAM:
 			if (scanline_cycles >= 172) {
-				scanline_cycles = 0;
+				scanline_cycles -= 172;
 				mode = LCD_STATUS_HORIZONTAL_BLANK;
+				debug_log("HBLANK\n");
 				render_scanline();
 				interrupt = LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
 			}
 			break;
 		case LCD_STATUS_HORIZONTAL_BLANK:
 			if (scanline_cycles >= 204) {
-				scanline_cycles = 0;
-				io[LCD_SCANLINE - 0xFF00] = ++current_scanline;
+				scanline_cycles -= 204;
+				current_scanline += 1;
+				io[LCD_SCANLINE - 0xFF00] = current_scanline;
 				if (current_scanline == 144) {
+					debug_log("VBLANK\n");
 					mode = LCD_STATUS_VERTICAL_BLANK;
 					interrupt = LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
 					draw_screen();
 				} else {
+					debug_log("ACCESS OAM\n");
 					mode = LCD_STATUS_ACCESS_OAM;
 					interrupt = LCD_STATUS_OAM_INTERRUPT;
 				}
 			}
 		case LCD_STATUS_VERTICAL_BLANK:
 			if (scanline_cycles >= 456) {
-				scanline_cycles = 0;
-				io[LCD_SCANLINE - 0xFF00] = ++current_scanline;
+				scanline_cycles -= 456;
+				current_scanline += 1;
+				io[LCD_SCANLINE - 0xFF00] = current_scanline;
 				if (current_scanline > 153) {
 					mode = LCD_STATUS_ACCESS_OAM;
+					debug_log("ACCESS OAM\n");
 					io[LCD_SCANLINE - 0xFF00] = 0;
 					interrupt = LCD_STATUS_OAM_INTERRUPT;
 				}
@@ -238,9 +226,11 @@ int gpu_init() {
 	readFboId = 0;
 	renderedTexture = 0;
 	
-	write_8_bit(LCD_STATUS_REG, LCD_STATUS_VERTICAL_BLANK);
+	write_8_bit(LCD_STATUS_REG, LCD_STATUS_ACCESS_OAM);
+	write_8_bit(LCD_CONTROL, 0x91);
 	quit = 0;
 	scanline_cycles = 0;
+
 	glfwSetErrorCallback(error_callback);
 
 	if (!glfwInit()) {

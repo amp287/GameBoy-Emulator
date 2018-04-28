@@ -18,12 +18,11 @@ int main() {
 	// clock cycles per second / FPS
 	// 4194304/60
 	
-	debug_init(0);
+	debug_init(1);
 
 	while(1) {
 		int cycles = cpu_step();
 		timer_update(cycles);
-		gpu_update(cycles);
 		check_interrupts();
 	}
 	gpu_stop();
