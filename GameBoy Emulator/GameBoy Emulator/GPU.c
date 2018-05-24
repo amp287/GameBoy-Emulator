@@ -1,8 +1,7 @@
+#include <stdio.h>
 #include "Memory.h"
 #include "GPU.h"
-#include <stdio.h>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include "Display.h"
 #include "Debug.h"
 
 #define SCROLL_Y 0xFF42
@@ -11,10 +10,9 @@
 #define WINDOW_X 0xFF4B
 #define TILE_SIZE 16
 
-int quit;
-GLFWwindow* window;
-GLuint readFboId;
-GLuint renderedTexture;
+static int quit;
+GLFWwindow* gameboy_window;
+
 int x = 0;
 // It takes the GPU 456 cycles to draw one scanline
 int scanline_cycles;
@@ -26,11 +24,14 @@ void lcd_interrupt(char type) {
 	unsigned char stat = read_8_bit(LCD_STATUS_REG);
 	unsigned char interrupt_enable = read_8_bit(INTERRUPT_ENABLE);
 
+	// Check to see if Interrupt is enabled in Stat
 	if (stat & type) {
-		if (type == LCD_STATUS_VERTICAL_BLANK && interrupt_enable & INTERRUPT_VBLANK)
+		if (type & LCD_STATUS_VERTICAL_BLANK_INTERRUPT && interrupt_enable & INTERRUPT_VBLANK) {
 			write_8_bit(INTERRUPT_FLAGS, interrupt | INTERRUPT_VBLANK);
-		else if (interrupt_enable & INTERRUPT_LCD)
+		}
+		if (interrupt_enable & INTERRUPT_LCD) {
 			write_8_bit(INTERRUPT_FLAGS, interrupt | INTERRUPT_LCD);
+		}
 	}
 }
 
@@ -118,14 +119,6 @@ void render_scanline_tiles() {
 	}
 }
 
-void draw_screen() {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glRasterPos2f(-1, 1);
-	glPixelZoom(1, -1);
-	glDrawPixels(160, 144, GL_RGB, GL_UNSIGNED_BYTE, screen_buffer);
-	glfwSwapBuffers(window);
-}
-
 void render_scanline() {
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
 	unsigned char current_scanline = read_8_bit(LCD_SCANLINE);
@@ -143,12 +136,12 @@ void gpu_update(int cycles) {
 	unsigned char compare = read_8_bit(LCD_SCANLINE_COMPARE);
 	unsigned char interrupt = 0;
 
-	glfwPollEvents();
+	// Make gameboy window current window 
+	display_poll_events(gameboy_window);
 
 	if (!(read_8_bit(LCD_CONTROL) & LCD_ENABLED)) {
 		io[LCD_SCANLINE - 0xFF00] = 0;
-		// set to horizontal blank
-		write_8_bit(LCD_STATUS_REG, (read_8_bit(LCD_STATUS_REG) & ~LCD_STATUS_MODE) | LCD_STATUS_HORIZONTAL_BLANK);
+		write_8_bit(LCD_STATUS_REG, (read_8_bit(LCD_STATUS_REG) & ~LCD_STATUS_MODE) | LCD_STATUS_VERTICAL_BLANK);
 		return;
 	}
 	
@@ -158,54 +151,68 @@ void gpu_update(int cycles) {
 		case LCD_STATUS_ACCESS_OAM:
 			if (scanline_cycles >= 80) {
 				scanline_cycles -= 80;
-				debug_log("ACCESS VRAM\n");
 				mode = LCD_STATUS_ACCESS_VRAM;
+				//debug_log("ACCESS VRAM\n");
 			}
 			break;
 		case LCD_STATUS_ACCESS_VRAM:
 			if (scanline_cycles >= 172) {
 				scanline_cycles -= 172;
 				mode = LCD_STATUS_HORIZONTAL_BLANK;
-				debug_log("HBLANK\n");
-				render_scanline();
 				interrupt = LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
+				//render_scanline();
+				//debug_log("HBLANK\n");
 			}
 			break;
 		case LCD_STATUS_HORIZONTAL_BLANK:
 			if (scanline_cycles >= 204) {
 				scanline_cycles -= 204;
-				current_scanline += 1;
+
+				current_scanline++;
 				io[LCD_SCANLINE - 0xFF00] = current_scanline;
+
 				if (current_scanline == 144) {
-					debug_log("VBLANK\n");
 					mode = LCD_STATUS_VERTICAL_BLANK;
 					interrupt = LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
-					draw_screen();
+					//debug_log("VBLANK\n");
+					display_update_buffer(gameboy_window, screen_buffer, 160, 144);
 				} else {
-					debug_log("ACCESS OAM\n");
 					mode = LCD_STATUS_ACCESS_OAM;
 					interrupt = LCD_STATUS_OAM_INTERRUPT;
+					//debug_log("ACCESS OAM\n");
 				}
 			}
+			break;
 		case LCD_STATUS_VERTICAL_BLANK:
 			if (scanline_cycles >= 456) {
 				scanline_cycles -= 456;
-				current_scanline += 1;
+				current_scanline++;
 				io[LCD_SCANLINE - 0xFF00] = current_scanline;
-				if (current_scanline > 153) {
-					mode = LCD_STATUS_ACCESS_OAM;
-					debug_log("ACCESS OAM\n");
+
+				if (current_scanline == 153) {
+					current_scanline = 0;
 					io[LCD_SCANLINE - 0xFF00] = 0;
-					interrupt = LCD_STATUS_OAM_INTERRUPT;
+					mode = LCD_STATUS_ACCESS_OAM;
+					interrupt |= LCD_STATUS_OAM_INTERRUPT;
+					//debug_log("ACCESS OAM\n");
 				}
-			}
+				//
+				/*else if (current_scanline == 0) {
+					scanline_cycles -= 456;
+					current_scanline++;
+					io[LCD_SCANLINE - 0xFF00] = current_scanline;
+					mode = LCD_STATUS_ACCESS_OAM;
+					interrupt |= LCD_STATUS_OAM_INTERRUPT;
+					//debug_log("ACCESS OAM\n");
+				}*/
+
+				if (compare == current_scanline)
+					interrupt = LCD_STATUS_COINCIDENCE_INTERRUPT;	//These may cause problems...
+			} 
 			break;
 	}
 	
 	lcd_interrupt(interrupt);
-
-	if (compare == current_scanline)
-		lcd_interrupt(LCD_STATUS_COINCIDENCE_INTERRUPT);
 
 	mode = (read_8_bit(LCD_STATUS_REG) & ~LCD_STATUS_MODE) | mode;
 	write_8_bit(LCD_STATUS_REG, mode);
@@ -217,21 +224,14 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
-static void error_callback(int error, const char* description)
-{
-	printf("%s\n", description);
-}
-
 int gpu_init() {
-	readFboId = 0;
-	renderedTexture = 0;
 	
-	write_8_bit(LCD_STATUS_REG, LCD_STATUS_ACCESS_OAM);
-	write_8_bit(LCD_CONTROL, 0x91);
 	quit = 0;
 	scanline_cycles = 0;
 
-	glfwSetErrorCallback(error_callback);
+	gameboy_window = display_create_window(160, 144, "Gameboy", key_callback);
+
+	/*glfwSetErrorCallback(error_callback);
 
 	if (!glfwInit()) {
 		printf("ERROR\n");
@@ -241,39 +241,26 @@ int gpu_init() {
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-	window = glfwCreateWindow(160, 144, "GameBoy", NULL, NULL);
+	gameboy_window = glfwCreateWindow(160, 144, "GameBoy", NULL, NULL);
 
-	if (!window) {
+	if (!gameboy_window) {
 		glfwTerminate();
 		printf("Error!\n");
 		getchar();
 		return -2;
 	}
 
-	glfwSetKeyCallback(window, key_callback);
-	glfwMakeContextCurrent(window);
+	glfwSetKeyCallback(gameboy_window, key_callback);
+	glfwMakeContextCurrent(gameboy_window);
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-	glfwSwapInterval(1);
-
-	//glGenFramebuffers(1, &readFboId);
-	//glBindFramebuffer(GL_FRAMEBUFFER, readFboId);
-
-	//glGenTextures(1, &renderedTexture);
-
-	// "Bind" the newly created texture : all future texture functions will modify this texture
-	//glBindTexture(GL_TEXTURE_2D, renderedTexture);
-
-	// Give an empty image to OpenGL ( the last "0" )
-	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 160, 144, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glfwSwapInterval(1);*/
 
 	return 0;
 }
 
 int gpu_stop() {
-	glfwDestroyWindow(window);
+	glfwDestroyWindow(gameboy_window);
 	glfwTerminate();
 	return 0;
 }

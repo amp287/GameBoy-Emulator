@@ -23,7 +23,7 @@ unsigned char read_8_bit(unsigned short addr) {
 	if (addr < 0xA000)
 		return vram[addr - 0x8000];
 	if (addr < 0xC000)
-		return read_ram_bank_8_bit(addr - 0x8000);
+		return read_ram_bank_8_bit(addr - 0xA000);
 	if (addr < 0xE000)
 		return internal_ram[addr - 0xC000];
 	if (addr < 0xFE00)
@@ -32,10 +32,6 @@ unsigned char read_8_bit(unsigned short addr) {
 		return sprite_info[addr - 0xFE00];	
 	if (addr < 0xFF80)
 		return io[addr - 0xFF00];
-	if (addr == INTERRUPT_ENABLE)
-		return zero_pg_ram[INTERRUPT_ENABLE];
-	if (addr == INTERRUPT_FLAGS)
-		return zero_pg_ram[INTERRUPT_FLAGS];
 	
 	return zero_pg_ram[addr - 0xFF80];
 }
@@ -66,6 +62,9 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		switch_cart_mode(val);
 
 	} else if (addr < 0xA000) {
+
+		if (val != 0 && addr >= 0x9800)
+			printf("Hello there!");
 
 		vram[addr - 0x8000] = val;
 
@@ -120,4 +119,10 @@ void write_16_bit(unsigned short addr, unsigned short val) {
 
 void load_bios() {
 	in_bios = 1;
+}
+
+// Writes to the IO space in memory without causing values to be set
+// that would happen in a normal write operation. 
+void memory_write_8_bit_io_no_side_effects(unsigned short addr, unsigned char val) {
+
 }
