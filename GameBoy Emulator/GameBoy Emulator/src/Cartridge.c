@@ -78,6 +78,9 @@ int load_rom(char *path) {
 	unsigned char buffer[0x4000];
 	int i = 0;
 
+	if(rom == NULL)
+		return -1;
+		
 	fread(buffer, 0x4000, 1, rom);
 
 	memcpy(name, &buffer[0x134], 16);

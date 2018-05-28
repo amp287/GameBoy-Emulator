@@ -1,7 +1,10 @@
 #include <stdio.h>
+#include <string.h>
 #include "Memory.h"
 #include "GPU.h"
 #include "Display.h"
+#include "Background_Viewer.h"
+
 
 // In pixels
 #define TILE_PIXEL_SIZE 8
@@ -13,11 +16,13 @@
 
 int quit;
 static GLFWwindow* background_window;
-
+static const char *window_title = "Map Background Viewer";
 static unsigned char buffer[256][256][3];
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
+void *lock;
+void *thread; 
+
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 }
@@ -99,16 +104,73 @@ void background_viewer_draw_screen() {
 	display_update_buffer(background_window, buffer, 256, 256);
 }
 
-int background_viewer_init() {
+void *background_viewer_get_thread(){
+	return thread;
+}
 
+void *background_viewer_run(void *arg){
+	int *quit = arg;
+	int quit_local = 0;
+	
+	background_window = display_create_window(256, 256, window_title, key_callback);
+
+	while(!quit_local){
+		background_viewer_draw_screen();
+
+		if(mutex_lock(lock) == 0){
+			quit_local = *quit;	
+			mutex_unlock(lock);
+		}
+	}
+
+	display_destroy(background_window);
+
+	return NULL;
+}
+
+int background_viewer_init() {
+	int ret = 0;
 	quit = 0;
 
-	background_window = display_create_window(256, 256, "GameBoy Background Viewer", key_callback);
-	
-	if (!background_window) {
-		printf("background_viewer: ERROR!\n");
-		return -1;
+	ret = mutex_create(&lock);
+
+	if(ret != 0) {
+		return ret;
 	}
-	
+
+	ret = thread_create(&thread, &background_viewer_run, &quit);//pthread_create(&thread, NULL, &background_viewer_run, &quit);
+
+	if(ret != 0){
+		printf("background_viewer_init() Thread creation failed (error:%d)\n",ret);
+		return ret;
+	}
+
 	return 0;
+}
+
+int background_viewer_quit(){
+	int ret = 0;
+
+	if((ret = mutex_lock(lock)) != 0)
+		//use debug_error
+		printf("background_viewer_send_quit() mutex lock failed: %d", ret);
+		return ret;
+
+	quit = 1;
+
+	mutex_unlock(lock);
+
+	if((ret = thread_join(thread)) != 0) {
+		//use debug_error
+		printf("background_viewer_send_quit() thread join failed: %d", ret);
+		return ret;
+	}
+
+	if((ret = mutex_destroy(lock)) != 0) {
+		//use debug_error
+		printf("background_viewer_send_quit() mutex_destroy failed: %d", ret);
+		return ret;
+	}
+
+	return ret;
 }

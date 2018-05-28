@@ -17,7 +17,7 @@ int halt_flag;
 int stop_flag;
 
 //cf is carry flag
-enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP, READ_8, READ_16, NA};
+enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP, READ_8, READ_16, ADDR, VAL, NA};
 
 typedef struct {
 	// Program Counter

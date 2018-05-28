@@ -1,8 +1,9 @@
+#include <string.h>
+#include <stdio.h>
 #include "Memory.h"
 #include "Timer.h"
 #include "Cartridge.h"
-#include <string.h>
-#include <stdio.h>
+#include "Debug.h"
 
 #define ENABLE_EXTERNAL_RAM 0x2000
 #define SWITCH_ROM_BANK 0x4000
@@ -62,9 +63,9 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		switch_cart_mode(val);
 
 	} else if (addr < 0xA000) {
-
-		if (val != 0 && addr >= 0x9800)
-			printf("Hello there!");
+		
+		if(addr > 0x9800)
+			debug_on_map_change();
 
 		vram[addr - 0x8000] = val;
 

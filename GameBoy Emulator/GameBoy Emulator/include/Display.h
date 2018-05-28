@@ -11,3 +11,5 @@ GLFWwindow *display_create_window(int width, int height, const char* name, GLFWk
 void display_update_buffer(GLFWwindow *display,const GLvoid *buffer, int width, int height);
 
 void display_poll_events(GLFWwindow *display);
+
+void display_destroy(GLFWwindow *display);
