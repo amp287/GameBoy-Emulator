@@ -4,11 +4,27 @@
 #include "Display.h"
 #include "Debug.h"
 
+#define LCD_STATUS_MODE 0x3
+#define LCD_STATUS_COINCIDENCE_FLAG 0x4
+#define LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT 0x8
+#define LCD_STATUS_VERTICAL_BLANK_INTERRUPT 0x10
+#define LCD_STATUS_OAM_INTERRUPT 0x20
+#define LCD_STATUS_COINCIDENCE_INTERRUPT 0x40
+
 #define SCROLL_Y 0xFF42
 #define SCROLL_X 0xFF43
 #define WINDOW_Y 0xFF4A
 #define WINDOW_X 0xFF4B
 #define TILE_SIZE 16
+
+typedef struct LCD_STATUS_REGISTER {
+	unsigned char lyc_ly_interrupt;
+	unsigned char oam_interrupt;
+	unsigned char vblank_interrupt;
+	unsigned char hblank_interrupt;
+	unsigned char coincidence_flag;
+	unsigned char mode_flag;
+}LCD_STATUS_REGISTER;
 
 static const char *window_title = "Gameboy";
 static int quit;
@@ -18,13 +34,49 @@ int x = 0;
 // It takes the GPU 456 cycles to draw one scanline
 int scanline_cycles;
 
-unsigned char screen_buffer[144][160][3];
+static unsigned char screen_buffer[144][160][3];
 
-void lcd_interrupt(char type) {
-	unsigned char interrupt = read_8_bit(INTERRUPT_FLAGS);
-	unsigned char stat = read_8_bit(LCD_STATUS_REG);
-	unsigned char interrupt_enable = read_8_bit(INTERRUPT_ENABLE);
+void set_scanline(unsigned char line) {
+	io[LCD_SCANLINE - 0xFF00] = line;
+}
 
+unsigned char get_scanline() {
+	return io[LCD_SCANLINE - 0xFF00];
+}
+
+void get_lcd_status(LCD_STATUS_REGISTER *reg) {
+	unsigned char status = read_8_bit(LCD_STATUS_REG);
+	reg->mode_flag = status & LCD_STATUS_MODE;
+	reg->coincidence_flag = status & LCD_STATUS_COINCIDENCE_FLAG;
+	reg->hblank_interrupt = status & LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
+	reg->vblank_interrupt = status & LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
+	reg->oam_interrupt = status & LCD_STATUS_OAM_INTERRUPT;
+}
+
+void set_lcd_status(LCD_STATUS_REGISTER reg) {
+	unsigned char status = 0;
+	status |= reg.lyc_ly_interrupt;
+	status = status << 1;
+	status |= reg.oam_interrupt;
+	status = status << 1;
+	status |= reg.vblank_interrupt;
+	status = status << 1;
+	status |= reg.hblank_interrupt;
+	status = status << 1;
+	status |= reg.coincidence_flag;
+	status = status << 2;
+	status |= reg.mode_flag;
+
+	write_8_bit(LCD_STATUS_REG, status);
+}
+
+void lcd_interrupt(LCD_STATUS_REGISTER reg) {
+
+	/*if (reg.mode_flag == LCD_STATUS_ACCESS_OAM && !reg.oam_interrupt)
+		return;
+	if (reg.mode_flag == LCD_STATUS_VERTICAL_BLANK && !reg.vblank_interrupt)
+		return;
+	if (reg.mode_flag == )
 	// Check to see if Interrupt is enabled in Stat
 	if (stat & type) {
 		if (type & LCD_STATUS_VERTICAL_BLANK_INTERRUPT && interrupt_enable & INTERRUPT_VBLANK) {
@@ -33,7 +85,7 @@ void lcd_interrupt(char type) {
 		if (interrupt_enable & INTERRUPT_LCD) {
 			write_8_bit(INTERRUPT_FLAGS, interrupt | INTERRUPT_LCD);
 		}
-	}
+	}*/
 }
 
 // Returns color 
@@ -60,11 +112,6 @@ void get_tile(unsigned short addr, unsigned short *tile) {
 }
 
 void render_scanline_tiles() {
-
-	//fill checkerboard for display test
-	//test();
-
-	//used to find starting point in Background map
 	unsigned char scroll_y = read_8_bit(SCROLL_Y);
 	unsigned char scroll_x = read_8_bit(SCROLL_X);
 
@@ -83,8 +130,8 @@ void render_scanline_tiles() {
 	// get the x and y pixels to start at in the starting tile
 	unsigned char tile_x = scroll_x % 8;
 	unsigned char tile_y = (scroll_y + scanline) % 8;
+
 	//TODO: check to see what tile source to use
-	//printf("Scanline:%d\n", scanline);
 
 	while(pixel < 160) {
 		unsigned short tile[8];
@@ -131,92 +178,73 @@ void render_scanline() {
 		;//render_sprites();
 }
 
-void gpu_update(int cycles) {
-	unsigned char current_scanline = read_8_bit(LCD_SCANLINE);
-	unsigned char mode = read_8_bit(LCD_STATUS_REG) & LCD_STATUS_MODE;
-	unsigned char compare = read_8_bit(LCD_SCANLINE_COMPARE);
-	unsigned char interrupt = 0;
+void update_lcd() {
+	LCD_STATUS_REGISTER status;
+	unsigned char lcd_enabled = read_8_bit(LCD_CONTROL) & LCD_ENABLED;
+	unsigned char scanline = get_scanline();
+	unsigned char mode_switch = 0;
 
-	// Make gameboy window current window 
-	display_poll_events(gameboy_window);
+	get_lcd_status(&status);
 
-	if (!(read_8_bit(LCD_CONTROL) & LCD_ENABLED)) {
-		io[LCD_SCANLINE - 0xFF00] = 0;
-		write_8_bit(LCD_STATUS_REG, (read_8_bit(LCD_STATUS_REG) & ~LCD_STATUS_MODE) | LCD_STATUS_VERTICAL_BLANK);
+	if (!lcd_enabled) {
+		scanline_cycles = 456;
+		set_scanline(0);
+		status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
+		set_lcd_status(status);
 		return;
 	}
-	
-	scanline_cycles += cycles;
 
-	switch (mode) {
-		case LCD_STATUS_ACCESS_OAM:
-			if (scanline_cycles >= 80) {
-				scanline_cycles -= 80;
-				mode = LCD_STATUS_ACCESS_VRAM;
-				//debug_log("ACCESS VRAM\n");
-			}
-			break;
-		case LCD_STATUS_ACCESS_VRAM:
-			if (scanline_cycles >= 172) {
-				scanline_cycles -= 172;
-				mode = LCD_STATUS_HORIZONTAL_BLANK;
-				interrupt = LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
-				render_scanline();
-				//debug_log("HBLANK\n");
-			}
-			break;
-		case LCD_STATUS_HORIZONTAL_BLANK:
-			if (scanline_cycles >= 204) {
-				scanline_cycles -= 204;
+	if (scanline >= 144) {
+		status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
+		mode_switch = 1;
+	} else {
 
-				current_scanline++;
-				io[LCD_SCANLINE - 0xFF00] = current_scanline;
-
-				if (current_scanline == 144) {
-					mode = LCD_STATUS_VERTICAL_BLANK;
-					interrupt = LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
-					//debug_log("VBLANK\n");
-					display_update_buffer(gameboy_window, screen_buffer, 160, 144);
-				} else {
-					mode = LCD_STATUS_ACCESS_OAM;
-					interrupt = LCD_STATUS_OAM_INTERRUPT;
-					//debug_log("ACCESS OAM\n");
-				}
-			}
-			break;
-		case LCD_STATUS_VERTICAL_BLANK:
-			if (scanline_cycles >= 456) {
-				scanline_cycles -= 456;
-				current_scanline++;
-				io[LCD_SCANLINE - 0xFF00] = current_scanline;
-
-				if (current_scanline == 153) {
-					current_scanline = 0;
-					io[LCD_SCANLINE - 0xFF00] = 0;
-					mode = LCD_STATUS_ACCESS_OAM;
-					interrupt |= LCD_STATUS_OAM_INTERRUPT;
-					//debug_log("ACCESS OAM\n");
-				}
-				//This is how CoffeeGB does it (IDK WHY)
-				/*else if (current_scanline == 0) {
-					scanline_cycles -= 456;
-					current_scanline++;
-					io[LCD_SCANLINE - 0xFF00] = current_scanline;
-					mode = LCD_STATUS_ACCESS_OAM;
-					interrupt |= LCD_STATUS_OAM_INTERRUPT;
-					//debug_log("ACCESS OAM\n");
-				}*/
-
-				if (compare == current_scanline)
-					interrupt = LCD_STATUS_COINCIDENCE_INTERRUPT;	//These may cause problems...
-			} 
-			break;
+		if (scanline_cycles >= 376) {
+			status.mode_flag = LCD_STATUS_ACCESS_OAM;
+			mode_switch = 1;
+		} else if (scanline >= 204) {
+			status.mode_flag = LCD_STATUS_ACCESS_VRAM;
+		} else {
+			status.mode_flag = LCD_STATUS_HORIZONTAL_BLANK;
+			mode_switch = 1;
+		}
 	}
-	
-	lcd_interrupt(interrupt);
 
-	mode = (read_8_bit(LCD_STATUS_REG) & ~LCD_STATUS_MODE) | mode;
-	write_8_bit(LCD_STATUS_REG, mode);
+	if (mode_switch)
+		lcd_interrupt(status);
+
+	//check for ly == LYC interrupts
+
+	set_lcd_status(status);
+}
+
+void gpu_update(int cycles) {
+	unsigned char lcd_enabled = read_8_bit(LCD_CONTROL) & LCD_ENABLED;
+	unsigned char scanline = get_scanline();
+
+	display_poll_events(gameboy_window);
+
+	update_lcd();
+
+	if (lcd_enabled)
+		scanline_cycles -= cycles;
+	else
+		return;
+
+	if (scanline_cycles <= 0) {
+
+		if (scanline < 144)
+			render_scanline();
+
+		set_scanline(++scanline);
+
+		scanline_cycles = 456;
+
+		if (scanline == 144)
+			display_update_buffer(gameboy_window, screen_buffer, 160, 144);//vblank interrupt?
+		else if (scanline > 153)
+			set_scanline(0);
+	}
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -228,7 +256,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 int gpu_init() {
 	
 	quit = 0;
-	scanline_cycles = 0;
+	scanline_cycles = 456;
 
 	gameboy_window = display_create_window(160, 144, window_title, key_callback);
 

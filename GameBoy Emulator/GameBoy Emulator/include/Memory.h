@@ -1,11 +1,4 @@
 #define MEM_SIZE 65536
-#define INTERRUPT_ENABLE 0xFFFF
-#define INTERRUPT_FLAGS 0xFF0F
-#define INTERRUPT_VBLANK 0x1
-#define INTERRUPT_LCD 0x2
-#define INTERRUPT_TIMER 0x4
-#define INTERRUPT_SERIAL 0x8
-#define INTERRUPT_JOYPAD 0x10
 #define LCD_CONTROL 0xFF40
 #define LCD_STATUS_REG 0xFF41
 #define LCD_SCANLINE 0xFF44
@@ -42,5 +35,7 @@ unsigned short read_16_bit(unsigned short addr);
 
 void write_8_bit(unsigned short addr, unsigned char val);
 void write_16_bit(unsigned short addr, unsigned short val);
+
+void memory_stack_push(unsigned short val);
 
 void load_bios();
