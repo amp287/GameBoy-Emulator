@@ -7,14 +7,14 @@
 
 #define CPU_CLOCK_SPEED 4194304
 
-//if 0 disable interrupt enable otherwise 
-int enable_interrupt;
-// interrupt counter set to 1 to change master interrupt after 1 instruction
-int counter_interrupt;
-//Stop cpu until interrupt occurs
-int halt_flag;
-// stop cpu and LCD until button is pressed
-int stop_flag;
+#define INTERRUPT_ENABLE 0xFFFF
+#define INTERRUPT_FLAGS 0xFF0F
+
+#define INTERRUPT_VBLANK 0x1
+#define INTERRUPT_LCD 0x2
+#define INTERRUPT_TIMER 0x4
+#define INTERRUPT_SERIAL 0x8
+#define INTERRUPT_JOYPAD 0x10
 
 //cf is carry flag
 enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP, READ_8, READ_16, ADDR, VAL, NA};
@@ -31,9 +31,16 @@ typedef struct {
 	// Last instruction time m -> machine cycles, t -> clock cycles
 	long m, t;
 
-	unsigned char flags;
-
 	unsigned char master_interrupt;
+
+	// interrupt counter set to 1 to change master interrupt after 1 instruction
+	int counter_interrupt;
+	//Stop cpu until interrupt occurs
+	int halt_flag;
+	// stop cpu and LCD until button is pressed
+	int stop_flag;
+
+	unsigned char flags;
 	
 	// Registers
 	union {
@@ -70,17 +77,10 @@ typedef struct {
 
 }CPU;
 
-void cpu_init();
-void cpu_reset();
-int cpu_step();
-long cpu_fetch();
-int cpu_execute();
-void check_interrupts();
-
 //Function Pointer
-// arg1 = Regval (for most instructions put this NA unless it takes 2 registers)
-// arg2 = Either immediate or Regval
-typedef void (*OPCODE_OPERATION)(unsigned short arg1, unsigned short arg2);
+// arg1 = Register
+// arg2 = Register or type 
+typedef void(*OPCODE_OPERATION)(unsigned short arg1, unsigned short arg2);
 
 typedef struct {
 	char *disassembly;
@@ -89,6 +89,13 @@ typedef struct {
 	int r2;
 	int cycles;
 }INSTR;
+
+void cpu_init();
+void cpu_reset();
+int cpu_step();
+long cpu_fetch();
+int cpu_execute();
+void check_interrupts();
 
 void LD_nn_n(unsigned short r1, unsigned short immediate);
 void LD_r1_r2(unsigned short r1, unsigned short r2);
@@ -206,7 +213,7 @@ static INSTR opcodes[] = {
 	{"DEC C", DEC_n, NA, C, 4},			//0x0D
 	{"LD C, n", LD_nn_n, C, READ_8, 8},		//0x0E
 	{"RRCA", RRCA, A, NA, 4},			//0x0F
-	{"STOP", STOP, NA, NA , 4},			//0x10
+	{"STOP", STOP, NA, READ_8 , 4},			//0x10
 	{"LD DE, nn", LD_n_nn, DE, READ_16, 12},	//0x11
 	{"LD DE, A", LD_n_A, NA, DE, 8},		//0x12
 	{"INC DE", INC_nn, DE, NA, 8},		//0x13

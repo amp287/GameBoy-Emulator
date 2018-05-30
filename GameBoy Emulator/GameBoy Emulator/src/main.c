@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
 		gpu_update(cycles);
 		//background_viewer_draw_screen();
 		check_interrupts();
+
 	}
 	gpu_stop();
 	background_viewer_quit();

@@ -86,6 +86,11 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		sprite_info[addr - 0xFE00] = val;
 
 	} else if (addr < 0xFF80) {
+		if (addr == 0xFF01) {
+			debug_log_serial_output(val);
+			printf("%c", val);
+		}
+			
 
 		if (addr == DIVIDER_REGISTER)
 			io[addr - 0xFF00] = 0;

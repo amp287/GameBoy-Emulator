@@ -1,8 +1,9 @@
 #include <string.h>
 #include "Debug.h"
 
-#define LINE_MAX 80000
+#define LINE_MAX 180000
 #define MAX_FILES 1
+FILE *debug, *serial_output;
 int lines, file_num;
 int log_flag = 0;
 int map_change;
@@ -19,7 +20,7 @@ void debug_log(const char *fmt, ...) {
 	if (debug == NULL || file_num > MAX_FILES || !log_flag)
 		return;
 
-	if (lines > LINE_MAX) {
+	/*if (lines > LINE_MAX) {
 		fclose(debug);
 		debug = NULL;
 		if (file_num > MAX_FILES)
@@ -28,7 +29,7 @@ void debug_log(const char *fmt, ...) {
 		sprintf(new_file_name, "log/Debug%d.txt", file_num++);
 		debug = fopen(new_file_name, "w");
 		lines = 0;
-	}
+	}*/
 	va_list args;
 	va_start(args, fmt);
 	int rc = vfprintf(debug, fmt, args);
@@ -56,4 +57,10 @@ void debug_init(int log_arg) {
 		debug = fopen("log/Debug.txt", "w");
 	else
 		debug = NULL;
+
+	serial_output = fopen("log/Serial.txt", "w");
+}
+
+void debug_log_serial_output(unsigned char byte) {
+	fprintf(serial_output, "%c", byte);
 }

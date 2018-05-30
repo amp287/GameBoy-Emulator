@@ -1,7 +1,7 @@
+#include <stdio.h>
 #include "Z80.h"
 #include "Memory.h"
 #include "GPU.h"
-#include "stdio.h"
 #include "Debug.h"
 
 typedef struct INSTRUCTION_REGISTER {
@@ -16,12 +16,9 @@ INSTRUCTION_REGISTER ir;
 
 CPU cpu;
 
-int interrupt_ticks_to_add;
 int print = 0;
 int instr_count = 0;
-
-//remove later
-int testnum = 0;
+int COUNTS = 0;
 
 void cpu_init() {
 
@@ -31,7 +28,9 @@ void cpu_init() {
 
 void cpu_print_reg_stack() {
 	debug_log("\t\tRegisters: AF:%04x BC:%04x DE:%04x\n\t\tHL:%x\n", cpu.af, cpu.bc, cpu.de, cpu.hl);
-	debug_log("\t\tStack:%x instr_count:%d cycles:%ld LY:%d", cpu.sp, instr_count, cpu.clock_t, read_8_bit(LCD_SCANLINE));
+	debug_log("\t\tStack:%x", cpu.sp);
+	//debug_log("\t\tStack:%x instr_count:%d cycles:%ld", cpu.sp, instr_count, cpu.clock_t);
+	//debug_log("\t\tStack:%x instr_count:%d cycles:%ld LY:%d", cpu.sp, instr_count, cpu.clock_t, read_8_bit(LCD_SCANLINE));
 	debug_log("\n\n");
 }
 
@@ -39,11 +38,20 @@ int cpu_step() {
 	cpu.t = 0;
 	cpu.m = 0;
 
+	//if (ir.instruction_index == 0x09 && cpu.af == 0x1f00 && cpu.bc == 0x000f) {
+	if (ir.instruction_index == 0x0b) {
+		enable_logging();
+	}
+
 	debug_log("----------------------------------------\n");
 	debug_log("pc:%04x\n", cpu.pc);
 
-	if (!halt_flag || !stop_flag) {
+	if (!cpu.halt_flag || !cpu.stop_flag) {
 		cpu.t += cpu_fetch();
+
+		if (ir.instruction_index == 0x09 && cpu.af == 0x1f00 && cpu.bc == 0x000f) {
+			;//printf("JELLO");
+		}
 
 		if (cpu_execute())
 			return -1;
@@ -55,18 +63,21 @@ int cpu_step() {
 
 	// Remove this after testing 0xc0c2 <- called before every test
 	// instr count 25000 for bios testing 7449564
-	if (instr_count == 50000) {
+	if (instr_count == 7410013) {
 
 		//if (++testnum == 1)
-		disable_logging();
+		//enable_logging();
 	}
+
+	//if (cpu.pc == 0xC2ec && cpu.af == 0x1020 && cpu.hl == 0xc6be)
+	//	printf("HI THERE\n");
+	//0xDEF8
+
 
 	cpu.clock_t += cpu.t;
 	cpu.clock_m += cpu.m;
 
 	cpu_print_reg_stack();
-
-	debug_log_on_map_change(cpu.pc);
 
 	return cpu.t;
 }
@@ -113,63 +124,13 @@ int cpu_execute() {
 		getchar();
 		return -1;
 	}
-	if (debug && print) {
+	
 		//printf("\t\tcpu_execute: [%s] ", ir.is_cb ? opcodesCB[ir.instruction_index].disassembly : opcodes[ir.instruction_index].disassembly);
 		//printf("%x %x \n", ir.first_param, ir.second_param);
-	}
 
 	(ir.execute)(ir.first_param, ir.second_param);
 
 	return 0;
-}
-
-void check_interrupts() {
-	unsigned char enabled = read_8_bit(INTERRUPT_ENABLE);
-	unsigned char flags = read_8_bit(INTERRUPT_FLAGS);
-
-	//used to enable interrupts after one instruction
-	if (counter_interrupt > 0)
-		enable_interrupt--;
-	if (counter_interrupt == 0) {
-		cpu.master_interrupt = enable_interrupt;
-		enable_interrupt--;
-	}
-
-	if (cpu.master_interrupt & (enabled & flags)) {
-		unsigned char fired = enabled & flags;
-
-		if (halt_flag)
-			halt_flag = 0;
-
-		cpu.master_interrupt = 0;
-		cpu.sp -= 2;
-		write_16_bit(cpu.sp, cpu.pc);
-
-		if (fired & INTERRUPT_VBLANK) {
-			cpu.pc = 0x40;
-			flags &= ~INTERRUPT_VBLANK;
-		} else if (fired & INTERRUPT_LCD) {
-			cpu.pc = 0x48;
-			flags &= ~INTERRUPT_LCD;
-		} else if (fired & INTERRUPT_TIMER) {
-			cpu.pc = 0x50;
-			flags &= ~INTERRUPT_TIMER;
-		} else if (fired & INTERRUPT_SERIAL) {
-			cpu.pc = 0x58;
-			flags &= ~INTERRUPT_SERIAL;
-		} else if (fired & INTERRUPT_JOYPAD) {
-			cpu.pc = 0x60;
-			stop_flag = 0;
-			flags &= ~INTERRUPT_JOYPAD;
-		}
-
-		write_8_bit(INTERRUPT_FLAGS, flags);
-		
-		// add 12 ticks
-		interrupt_ticks_to_add = 12;
-		return;
-	}
-	interrupt_ticks_to_add = 0;
 }
 
 void cpu_reset() {
@@ -185,7 +146,7 @@ void cpu_reset() {
 	cpu.pc = 0x0;
 	cpu.clock_m = 0;
 	cpu.clock_t = 0;
-	interrupt_ticks_to_add = 0;
+	cpu.master_interrupt = 1;
 
 	write_8_bit(0xFF05, 0);
 	write_8_bit(0xFF06, 0);
@@ -220,6 +181,69 @@ void cpu_reset() {
 	write_8_bit(0xFF4B, 0x00);
 	write_8_bit(0xFFFF, 0x00);
 	write_8_bit(LCD_STATUS_REG, LCD_STATUS_ACCESS_OAM);
+}
+
+void check_interrupts() {
+	unsigned char enabled = read_8_bit(INTERRUPT_ENABLE);
+	unsigned char flags = read_8_bit(INTERRUPT_FLAGS);
+
+	/*//used to enable interrupts after one instruction
+	if (cpu.counter_interrupt > 0)
+		cpu.enable_interrupt--;
+	if (cpu.counter_interrupt == 0) {
+		cpu.master_interrupt = cpu.enable_interrupt;
+		cpu.enable_interrupt--;
+	}
+	*/
+	if (cpu.halt_flag && !cpu.master_interrupt)
+		cpu.halt_flag = 0;
+	if (cpu.stop_flag && !cpu.master_interrupt)
+		cpu.stop_flag = 0;
+
+	if (cpu.master_interrupt & (enabled & flags)) {
+		unsigned char fired = enabled & flags;
+
+		cpu.halt_flag = 0;
+
+		cpu.master_interrupt = 0;
+		cpu.sp -= 2;
+		write_16_bit(cpu.sp, cpu.pc);
+
+		if (fired & INTERRUPT_VBLANK) {
+			cpu.pc = 0x40;
+			flags &= ~INTERRUPT_VBLANK;
+		}
+		else if (fired & INTERRUPT_LCD) {
+			cpu.pc = 0x48;
+			flags &= ~INTERRUPT_LCD;
+		}
+		else if (fired & INTERRUPT_TIMER) {
+			cpu.pc = 0x50;
+			flags &= ~INTERRUPT_TIMER;
+		}
+		else if (fired & INTERRUPT_SERIAL) {
+			cpu.pc = 0x58;
+			flags &= ~INTERRUPT_SERIAL;
+		}
+		else if (fired & INTERRUPT_JOYPAD) {
+			cpu.pc = 0x60;
+			cpu.stop_flag = 0;
+			flags &= ~INTERRUPT_JOYPAD;
+
+			unsigned char lcd_control = read_8_bit(LCD_CONTROL);
+			lcd_control |= LCD_ENABLED;
+			write_8_bit(LCD_CONTROL, lcd_control);
+		}
+
+		write_8_bit(INTERRUPT_FLAGS, flags);
+		return;
+	}
+}
+
+void interrupt_set(unsigned char type) {
+	unsigned char i_flags = read_8_bit(INTERRUPT_FLAGS);
+	i_flags |= type;
+	write_8_bit(INTERRUPT_FLAGS, i_flags);
 }
 
 void clear_flag(unsigned char flag) {
@@ -722,12 +746,12 @@ void ADD_HL_n(unsigned short NA, unsigned short n) {
 		else
 			clear_flag(CARRY_FLAG);
 
-		cpu.hl = (unsigned short)res;
-
-		if (((cpu.hl & 0x0F) + (n & 0x0F)) > 0x0F)
+		if (((cpu.hl & 0x0FFF) + (n & 0x0FFF)) & 0x1000)
 			set_flag(HALF_CARRY_FLAG);
 		else
 			clear_flag(HALF_CARRY_FLAG);
+
+		cpu.hl = (unsigned short)res;
 }
 
 void ADD_SP_n(unsigned short sp, unsigned short n) {
@@ -863,31 +887,31 @@ void NOP(unsigned short NA_1, unsigned short NA_2) {
 
 //Power down (Stop) CPU until interrupt occurs
 void HALT(unsigned short NA_1, unsigned short NA_2) {
-	halt_flag = 1;
+	cpu.halt_flag = 1;
 }
 
 //Halt CPU & LCD display until button pressed
 void STOP(unsigned short NA_1, unsigned short NA_2) {
-	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
-	stop_flag = 1;
-	lcd_control |= ~LCD_ENABLED;
-	write_8_bit(LCD_CONTROL, lcd_control);//TODO check this http://www.codeslinger.co.uk/pages/projects/gameboy/lcd.html
+	//unsigned char lcd_control = read_8_bit(LCD_CONTROL);
+	cpu.stop_flag = 1;
+	//lcd_control |= ~LCD_ENABLED;
+	//write_8_bit(LCD_CONTROL, lcd_control);//TODO check this http://www.codeslinger.co.uk/pages/projects/gameboy/lcd.html
 }
 
 //This instruction disables interrupts but not
 //immediately.Interrupts are disabled after
 //instruction after DI is executed.
 void DI(unsigned short NA_1, unsigned short NA_2) {
-	enable_interrupt = 0;
-	counter_interrupt = 1;
+	cpu.master_interrupt = 0;
+	cpu.counter_interrupt = 1;
 }
 
 //Enable interrupts. This intruction enables interrupts
 //but not immediately.Interrupts are enabled after
 //instruction after EI is executed.
 void EI(unsigned short NA_1, unsigned short NA_2) {
-	enable_interrupt = 1;
-	counter_interrupt = 1;
+	cpu.master_interrupt = 1;
+	cpu.counter_interrupt = 1;
 }
 
 //Rotates & Shifts

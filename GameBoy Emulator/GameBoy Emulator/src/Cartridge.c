@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CART_TYPE_ROM_ONLY 0
 #define CART_TYPE_MBC1 1
 #define CART_TYPE_MBC1_RAM 2
 #define CART_TYPE_MBC1_RAM_BATT 3
@@ -13,6 +14,7 @@
 
 #define CART_MODE_MBC1_16MBIT_8KB 0
 #define CART_MODE_MBC1_4MBIT_32KB 1
+#define CART_MODE_ROM_ONLY 3
 
 char name[17];
 unsigned char cartridge_type;
@@ -73,8 +75,26 @@ int set_ram_size(unsigned char size_code) {
 	return 0;
 }
 
+int cart_check(unsigned char cart_type) {
+	switch (cartridge_type) {
+		case CART_TYPE_ROM_ONLY :
+			current_mode = CART_MODE_ROM_ONLY;
+			current_rom_bank = 1;
+			break;
+		case CART_TYPE_MBC1 :
+			current_mode = CART_MODE_MBC1_16MBIT_8KB;
+			current_rom_bank = 1;
+			break;
+		default:
+			printf("ERROR cart type (%d) not supported\n", cart_type);
+			return -1;
+	}
+
+	return 0;
+}
+
 int load_rom(char *path) {
-	FILE *rom = fopen("../Roms/cpu_instrs.gb", "rb");
+	FILE *rom = fopen("../Roms/09-op r,r.gb", "rb");
 	unsigned char buffer[0x4000];
 	int i = 0;
 
@@ -86,6 +106,9 @@ int load_rom(char *path) {
 	memcpy(name, &buffer[0x134], 16);
 
 	cartridge_type = buffer[0x147];
+	
+	if (cart_check(cartridge_type) != 0)
+		return -1;
 
 	if (set_rom_size(buffer[0x148]) != 0) {
 		fclose(rom);
@@ -101,10 +124,8 @@ int load_rom(char *path) {
 	memcpy(rom_banks[0], buffer, 0x4000);
 
 	for (i = 1; i < rom_size; i++) {
-		fread(rom_banks[i], 0x4000, 1, rom);
+		fread(rom_banks[i], 1, 0x4000, rom);
 	}
-	
-	current_mode = CART_MODE_MBC1_16MBIT_8KB;
 
 	fclose(rom);
 	return 0;
@@ -146,6 +167,9 @@ void switch_rom_set(unsigned char set) {
 	}
 }
 
+// Depending on the current mode, will either:
+// switch the current ram bank loaded on 4/32 mode, 
+// switch the current rom address significant bits.
 void switch_ram_bank_rom_set(unsigned char bank) {
 	if (current_mode == CART_MODE_MBC1_4MBIT_32KB)
 		current_ram_bank = bank;
