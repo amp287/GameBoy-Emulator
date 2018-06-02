@@ -91,7 +91,6 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 			printf("%c", val);
 		}
 			
-
 		if (addr == DIVIDER_REGISTER)
 			io[addr - 0xFF00] = 0;
 

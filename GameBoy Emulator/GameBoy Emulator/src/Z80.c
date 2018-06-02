@@ -3,6 +3,7 @@
 #include "Memory.h"
 #include "GPU.h"
 #include "Debug.h"
+#include "Interrupts.h"
 
 typedef struct INSTRUCTION_REGISTER {
 	int instruction_index;
@@ -20,6 +21,20 @@ int print = 0;
 int instr_count = 0;
 int COUNTS = 0;
 
+void cpu_fire_interrupt(unsigned short addr) {
+	cpu.sp -= 2;
+	write_16_bit(cpu.sp, cpu.pc);
+	cpu.pc = addr;
+}
+
+void cpu_unhalt() {
+	cpu.halt = 0;
+}
+
+unsigned char cpu_halt_status() {
+	return cpu.halt;
+}
+
 void cpu_init() {
 
 	load_bios();
@@ -27,31 +42,28 @@ void cpu_init() {
 }
 
 void cpu_print_reg_stack() {
-	debug_log("\t\tRegisters: AF:%04x BC:%04x DE:%04x\n\t\tHL:%x\n", cpu.af, cpu.bc, cpu.de, cpu.hl);
+	debug_log("\t\tOpcode:%02x Registers: AF:%04x BC:%04x DE:%04x\n\t\tHL:%x\n", ir.instruction_index, cpu.af, cpu.bc, cpu.de, cpu.hl);
 	debug_log("\t\tStack:%x", cpu.sp);
 	//debug_log("\t\tStack:%x instr_count:%d cycles:%ld", cpu.sp, instr_count, cpu.clock_t);
 	//debug_log("\t\tStack:%x instr_count:%d cycles:%ld LY:%d", cpu.sp, instr_count, cpu.clock_t, read_8_bit(LCD_SCANLINE));
 	debug_log("\n\n");
 }
 
-int cpu_step() {
-	cpu.t = 0;
-	cpu.m = 0;
+int cpu_step(int cycles) {
+	cpu.t = cycles;
+	cpu.m = cycles / 4;
 
 	//if (ir.instruction_index == 0x09 && cpu.af == 0x1f00 && cpu.bc == 0x000f) {
-	if (ir.instruction_index == 0x0b) {
+
+	if (cpu.pc == 0xc252) {
 		enable_logging();
 	}
 
 	debug_log("----------------------------------------\n");
 	debug_log("pc:%04x\n", cpu.pc);
 
-	if (!cpu.halt_flag || !cpu.stop_flag) {
+	if (!cpu.halt) {
 		cpu.t += cpu_fetch();
-
-		if (ir.instruction_index == 0x09 && cpu.af == 0x1f00 && cpu.bc == 0x000f) {
-			;//printf("JELLO");
-		}
 
 		if (cpu_execute())
 			return -1;
@@ -63,8 +75,8 @@ int cpu_step() {
 
 	// Remove this after testing 0xc0c2 <- called before every test
 	// instr count 25000 for bios testing 7449564
-	if (instr_count == 7410013) {
-
+	if (instr_count == 0x0024c76F) {
+		//printf("moo");
 		//if (++testnum == 1)
 		//enable_logging();
 	}
@@ -146,7 +158,7 @@ void cpu_reset() {
 	cpu.pc = 0x0;
 	cpu.clock_m = 0;
 	cpu.clock_t = 0;
-	cpu.master_interrupt = 1;
+	reset_master_interrupt(0);
 
 	write_8_bit(0xFF05, 0);
 	write_8_bit(0xFF06, 0);
@@ -181,69 +193,6 @@ void cpu_reset() {
 	write_8_bit(0xFF4B, 0x00);
 	write_8_bit(0xFFFF, 0x00);
 	write_8_bit(LCD_STATUS_REG, LCD_STATUS_ACCESS_OAM);
-}
-
-void check_interrupts() {
-	unsigned char enabled = read_8_bit(INTERRUPT_ENABLE);
-	unsigned char flags = read_8_bit(INTERRUPT_FLAGS);
-
-	/*//used to enable interrupts after one instruction
-	if (cpu.counter_interrupt > 0)
-		cpu.enable_interrupt--;
-	if (cpu.counter_interrupt == 0) {
-		cpu.master_interrupt = cpu.enable_interrupt;
-		cpu.enable_interrupt--;
-	}
-	*/
-	if (cpu.halt_flag && !cpu.master_interrupt)
-		cpu.halt_flag = 0;
-	if (cpu.stop_flag && !cpu.master_interrupt)
-		cpu.stop_flag = 0;
-
-	if (cpu.master_interrupt & (enabled & flags)) {
-		unsigned char fired = enabled & flags;
-
-		cpu.halt_flag = 0;
-
-		cpu.master_interrupt = 0;
-		cpu.sp -= 2;
-		write_16_bit(cpu.sp, cpu.pc);
-
-		if (fired & INTERRUPT_VBLANK) {
-			cpu.pc = 0x40;
-			flags &= ~INTERRUPT_VBLANK;
-		}
-		else if (fired & INTERRUPT_LCD) {
-			cpu.pc = 0x48;
-			flags &= ~INTERRUPT_LCD;
-		}
-		else if (fired & INTERRUPT_TIMER) {
-			cpu.pc = 0x50;
-			flags &= ~INTERRUPT_TIMER;
-		}
-		else if (fired & INTERRUPT_SERIAL) {
-			cpu.pc = 0x58;
-			flags &= ~INTERRUPT_SERIAL;
-		}
-		else if (fired & INTERRUPT_JOYPAD) {
-			cpu.pc = 0x60;
-			cpu.stop_flag = 0;
-			flags &= ~INTERRUPT_JOYPAD;
-
-			unsigned char lcd_control = read_8_bit(LCD_CONTROL);
-			lcd_control |= LCD_ENABLED;
-			write_8_bit(LCD_CONTROL, lcd_control);
-		}
-
-		write_8_bit(INTERRUPT_FLAGS, flags);
-		return;
-	}
-}
-
-void interrupt_set(unsigned char type) {
-	unsigned char i_flags = read_8_bit(INTERRUPT_FLAGS);
-	i_flags |= type;
-	write_8_bit(INTERRUPT_FLAGS, i_flags);
 }
 
 void clear_flag(unsigned char flag) {
@@ -293,6 +242,10 @@ void LD_r1_r2(unsigned short r1, unsigned short r2) {
 	} else {
 		*get_register(r1) = *get_register(r2);
 	}
+}
+
+void LD_HL_n(unsigned short hl, unsigned short n) {
+	write_8_bit(cpu.hl, (unsigned char)n);
 }
 
 void LD_A_n(unsigned short type, unsigned short n) {
@@ -400,17 +353,18 @@ void LD_SP_HL(unsigned short sp, unsigned short hl) {
 }
 
 void LDHL_SP_n(unsigned short sp, unsigned short n) {
-	int result = cpu.sp + (signed char)n;
 
-	if (result & 0xffff0000) set_flag(CARRY_FLAG);
-	else clear_flag(CARRY_FLAG);
+	if ((cpu.sp & 0x0FF) + (n & 0x0FF) & 0x100) 
+		set_flag(CARRY_FLAG);
+	else 
+		clear_flag(CARRY_FLAG);
 
-	if (((cpu.sp & 0x0f) + (n & 0x0f)) > 0x0f) set_flag(HALF_CARRY_FLAG);
+	if (((cpu.sp & 0x0f) + (n & 0x0f)) & 0x10) set_flag(HALF_CARRY_FLAG);
 	else clear_flag(HALF_CARRY_FLAG);
 
 	clear_flag(ZERO_FLAG | SUBTRACT_FLAG);
 
-	cpu.hl = (unsigned short)(result & 0xffff);
+	cpu.hl = cpu.sp + (char)n;
 }
 
 void LD_nn_SP(unsigned short sp, unsigned short nn) {
@@ -470,6 +424,8 @@ void ADD_A_n(unsigned short type, unsigned short n) {
 	else
 		n = *get_register(n);
 
+	clear_flag(SUBTRACT_FLAG);
+
 	unsigned int result = cpu.a + n;
 
 	if (result & 0xFF00)
@@ -477,47 +433,53 @@ void ADD_A_n(unsigned short type, unsigned short n) {
 	else
 		clear_flag(CARRY_FLAG);
 
+	if (((cpu.a & 0x0F) + (n & 0x0F)) & 0x10)
+		set_flag(HALF_CARRY_FLAG);
+	else
+		clear_flag(HALF_CARRY_FLAG);
+
 	cpu.a = cpu.a + n;
 
 	if (cpu.a)
 		clear_flag(ZERO_FLAG);
 	else
 		set_flag(ZERO_FLAG);
-
-	if (((cpu.a & 0x0F) + (n & 0x0F)) > 0x0F)
-		set_flag(HALF_CARRY_FLAG);
-	else
-		clear_flag(HALF_CARRY_FLAG);
 }
 
 void ADC_A_n(unsigned short type, unsigned short n) {
+	unsigned char carry;
+
 	if (type == READ_8)
-		;
+		; // n is an immediate 
 	else if (n == HL)
 		n = read_8_bit(cpu.hl);
 	else
 		n = *get_register(n);
 
-	n += cpu.f & CARRY_FLAG ? 1 : 0;
+	carry = cpu.f & CARRY_FLAG ? 1 : 0;
 
-	if (((cpu.a & 0x0F) + (n & 0x0F)) > 0x0F)
+	if (((cpu.a & 0x0F) + ((n + carry) & 0x0F)) & 0x10)
+		set_flag(HALF_CARRY_FLAG);
+	else if (((n & 0x0F) + carry) & 0x10)
 		set_flag(HALF_CARRY_FLAG);
 	else
 		clear_flag(HALF_CARRY_FLAG);
 
-	unsigned int result = cpu.a + n;
+	unsigned int result = cpu.a + n + carry;
 
 	if (result & 0xFF00)
 		set_flag(CARRY_FLAG);
 	else
 		clear_flag(CARRY_FLAG);
 
-	cpu.a = cpu.a + n;
+	cpu.a = cpu.a + n + carry;
 
 	if (cpu.a)
 		clear_flag(ZERO_FLAG);
 	else
 		set_flag(ZERO_FLAG);
+
+	clear_flag(SUBTRACT_FLAG);
 
 }
 
@@ -550,33 +512,39 @@ void SUB_n(unsigned short type, unsigned short n) {
 }
 
 void SBC_A_n(unsigned short type, unsigned short n) {
+	unsigned char flag;
+	unsigned short res;
 	if (type == READ_8)
 		;
 	else if (n == HL)
 		n = read_8_bit(cpu.hl);
 	else
 		n = *get_register(n);
-
-	n += cpu.f & CARRY_FLAG ? 1 : 0;
+	
+	flag = cpu.f & CARRY_FLAG ? 1 : 0;
 
 	set_flag(SUBTRACT_FLAG);
 
-	if (n > cpu.a)
+	res = cpu.a - n;
+
+	if (cpu.a < n || cpu.a - n < flag)
 		set_flag(CARRY_FLAG);
 	else
 		clear_flag(CARRY_FLAG);
+
+	if ((cpu.a & 0x0F) < (n & 0x0F))
+		set_flag(HALF_CARRY_FLAG);
+	else if (((cpu.a - n) & 0x0F) < flag)
+		set_flag(HALF_CARRY_FLAG);
+	else
+		clear_flag(HALF_CARRY_FLAG);
+
+	cpu.a = cpu.a - n - flag;
 
 	if (cpu.a == 0)
 		set_flag(ZERO_FLAG);
 	else
 		clear_flag(ZERO_FLAG);
-
-	if (((cpu.a & 0x0F) + (n & 0x0F)) > 0x0F)
-		set_flag(HALF_CARRY_FLAG);
-	else
-		clear_flag(HALF_CARRY_FLAG);
-
-	cpu.a = cpu.a + n;
 }
 
 void AND_n(unsigned short type, unsigned short n) {
@@ -735,6 +703,9 @@ void ADD_HL_n(unsigned short NA, unsigned short n) {
 				break;
 			case HL:
 				n = cpu.hl;
+				break;
+			case SP:
+				n = cpu.sp;
 		}
 
 		clear_flag(SUBTRACT_FLAG);
@@ -757,26 +728,21 @@ void ADD_HL_n(unsigned short NA, unsigned short n) {
 void ADD_SP_n(unsigned short sp, unsigned short n) {
 	clear_flag(SUBTRACT_FLAG | ZERO_FLAG);
 
-	unsigned long res = cpu.sp + n;
-
-	if (res & 0xFFFF0000)
+	if ((cpu.sp & 0x0FF) + (n & 0x0FF) & 0x100)
 		set_flag(CARRY_FLAG);
 	else
 		clear_flag(CARRY_FLAG);
 
-	cpu.sp = (unsigned short)res;
-
-	if (((cpu.sp & 0x0F) + (n & 0x0F)) > 0x0F)
+	if (((cpu.sp & 0x0F) + ((char)n & 0x0F)) & 0x10)
 		set_flag(HALF_CARRY_FLAG);
 	else
 		clear_flag(HALF_CARRY_FLAG);
+
+	cpu.sp = cpu.sp + (char)n;
 }
 
 void INC_nn(unsigned short nn, unsigned short NA) {
 	switch (nn) {
-		case AF:
-			cpu.af++;
-			break;
 		case BC:
 			cpu.bc++;
 			break;
@@ -785,14 +751,14 @@ void INC_nn(unsigned short nn, unsigned short NA) {
 			break;
 		case HL:
 			cpu.hl++;
+			break;
+		case SP:
+			cpu.sp++;
 	}
 }
 
 void DEC_nn(unsigned short nn, unsigned short NA) {
 	switch (nn) {
-		case AF:
-			cpu.af--;
-			break;
 		case BC:
 			cpu.bc--;
 			break;
@@ -801,6 +767,9 @@ void DEC_nn(unsigned short nn, unsigned short NA) {
 			break;
 		case HL:
 			cpu.hl--;
+			break;
+		case SP:
+			cpu.sp--;
 	}
 }
 
@@ -818,7 +787,7 @@ void SWAP_n(unsigned short n, unsigned short NA) {
 	lower = 0x0F & val;
 
 	val = lower << 4;
-	val &= upper >> 4;
+	val |= upper >> 4;
 
 	if (val)
 		clear_flag(ZERO_FLAG);
@@ -887,48 +856,42 @@ void NOP(unsigned short NA_1, unsigned short NA_2) {
 
 //Power down (Stop) CPU until interrupt occurs
 void HALT(unsigned short NA_1, unsigned short NA_2) {
-	cpu.halt_flag = 1;
+	cpu.halt = 1;
 }
 
 //Halt CPU & LCD display until button pressed
 void STOP(unsigned short NA_1, unsigned short NA_2) {
-	//unsigned char lcd_control = read_8_bit(LCD_CONTROL);
-	cpu.stop_flag = 1;
-	//lcd_control |= ~LCD_ENABLED;
-	//write_8_bit(LCD_CONTROL, lcd_control);//TODO check this http://www.codeslinger.co.uk/pages/projects/gameboy/lcd.html
+	printf("STOP command (Dont know how to implement yet)\n");
 }
 
 //This instruction disables interrupts but not
 //immediately.Interrupts are disabled after
 //instruction after DI is executed.
 void DI(unsigned short NA_1, unsigned short NA_2) {
-	cpu.master_interrupt = 0;
-	cpu.counter_interrupt = 1;
+	reset_master_interrupt(0);
 }
 
 //Enable interrupts. This intruction enables interrupts
 //but not immediately.Interrupts are enabled after
 //instruction after EI is executed.
 void EI(unsigned short NA_1, unsigned short NA_2) {
-	cpu.master_interrupt = 1;
-	cpu.counter_interrupt = 1;
+	set_master_interrupt(0);
 }
 
 //Rotates & Shifts
 
-//This may be wrong (different than Cinoop but should be right according to GBCPUman doc)
 void RLCA(unsigned short A, unsigned short NA) {
 	unsigned char carry = (cpu.a & 0x80) >> 7;
-	if (carry) {
+	if (carry)
 		set_flag(CARRY_FLAG);
-	} else {
+	 else
 		clear_flag(CARRY_FLAG);
-		set_flag(ZERO_FLAG);
-	}
-	cpu.a <<= 1;
-	cpu.a += carry;
 
-	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG);
+	cpu.a <<= 1;
+	cpu.a &= 0xFE;
+	cpu.a |= carry;
+
+	clear_flag(SUBTRACT_FLAG | HALF_CARRY_FLAG | ZERO_FLAG);
 }
 
 //Followed Cinoop implementation for following rotations and shifts
@@ -1105,12 +1068,17 @@ void SLA_n(unsigned short n, unsigned short NA) {
 	else
 		num = *get_register(n);
 
+	if (num & 0x80)
+		set_flag(CARRY_FLAG);
+	else
+		clear_flag(CARRY_FLAG);
+
 	num <<= 1;
 
-	if (num)
-		clear_flag(ZERO_FLAG);
-	else
+	if (num == 0)
 		set_flag(ZERO_FLAG);
+	else
+		clear_flag(ZERO_FLAG);
 
 	if (n == HL)
 		write_8_bit(cpu.hl, num);
@@ -1122,6 +1090,7 @@ void SLA_n(unsigned short n, unsigned short NA) {
 
 void SRA_n(unsigned short n, unsigned short NA) {
 	unsigned char num;
+	unsigned char shift_val;
 
 	if (n == HL)
 		num = read_8_bit(cpu.hl);
@@ -1129,11 +1098,15 @@ void SRA_n(unsigned short n, unsigned short NA) {
 		num = *get_register(n);
 	
 	if (num & 0x01)
-		clear_flag(CARRY_FLAG);
-	else
 		set_flag(CARRY_FLAG);
+	else
+		clear_flag(CARRY_FLAG);
+	
+	// Shift val is used to store the sign bit
+	// for arithmetic shifts
+	shift_val = num & 0x80;
 
-	num = (num & 0x80) | (num >> 1);
+	num = (num >> 1) | shift_val;
 
 	if (num)
 		clear_flag(ZERO_FLAG);
@@ -1369,7 +1342,7 @@ void RET_cc(unsigned short cc, unsigned short NA) {
 }
 
 void RETI(unsigned short NA_1, unsigned short NA_2) {
-	cpu.master_interrupt = 1;
+	set_master_interrupt(0);
 	cpu.pc = read_16_bit(cpu.sp);
 	cpu.sp += 2;
 }

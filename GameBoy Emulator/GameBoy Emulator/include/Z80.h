@@ -7,15 +7,6 @@
 
 #define CPU_CLOCK_SPEED 4194304
 
-#define INTERRUPT_ENABLE 0xFFFF
-#define INTERRUPT_FLAGS 0xFF0F
-
-#define INTERRUPT_VBLANK 0x1
-#define INTERRUPT_LCD 0x2
-#define INTERRUPT_TIMER 0x4
-#define INTERRUPT_SERIAL 0x8
-#define INTERRUPT_JOYPAD 0x10
-
 //cf is carry flag
 enum Regval { A, B, C, D, E, H, L, AF, BC, DE, HL, Z, Cf, NC, NZ, SP, READ_8, READ_16, ADDR, VAL, NA};
 
@@ -31,16 +22,9 @@ typedef struct {
 	// Last instruction time m -> machine cycles, t -> clock cycles
 	long m, t;
 
-	unsigned char master_interrupt;
-
-	// interrupt counter set to 1 to change master interrupt after 1 instruction
-	int counter_interrupt;
-	//Stop cpu until interrupt occurs
-	int halt_flag;
-	// stop cpu and LCD until button is pressed
-	int stop_flag;
-
 	unsigned char flags;
+
+	unsigned char halt;
 	
 	// Registers
 	union {
@@ -92,13 +76,23 @@ typedef struct {
 
 void cpu_init();
 void cpu_reset();
-int cpu_step();
+int cpu_step(int cycles);
 long cpu_fetch();
 int cpu_execute();
-void check_interrupts();
+
+// sets the cpu halt flag to 0
+void cpu_unhalt();
+
+//get halt status
+unsigned char cpu_halt_status();
+
+// tell the cpu to save the pc onto the stack and
+// jump to the interrupt vector 
+void cpu_fire_interrupt(unsigned short addr);
 
 void LD_nn_n(unsigned short r1, unsigned short immediate);
 void LD_r1_r2(unsigned short r1, unsigned short r2);
+void LD_HL_n(unsigned short hl, unsigned short n); // Used for 0x36
 void LD_A_n(unsigned short a, unsigned short r2);
 void LD_A_nn(unsigned short a, unsigned short nn);
 void LD_A_imm(unsigned short a, unsigned short immediate);
@@ -205,7 +199,7 @@ static INSTR opcodes[] = {
 	{"DEC B", DEC_n, NA, B, 4},			//0x05
 	{"LD B, n", LD_nn_n, B, READ_8, 8},		//0x06
 	{"RLCA", RLCA, A, NA, 4},			//0x07
-	{"LD nn, SP", LD_nn_SP, READ_16, SP, 20},	//0x08
+	{"LD nn, SP", LD_nn_SP, SP, READ_16, 20},	//0x08
 	{"ADD HL, BC", ADD_HL_n, HL, BC, 8},	//0x09
 	{"LD A, BC", LD_A_n, A, BC, 8},		//0x0A
 	{"DEC BC", DEC_nn, BC, NA, 8},		//0x0B
@@ -251,7 +245,7 @@ static INSTR opcodes[] = {
 	{"INC SP", INC_nn, SP, NA, 8},		//0x33
 	{"INC HL", INC_n, NA, HL, 12},		//0x34
 	{"DEC HL", DEC_n, NA, HL, 12},		//0x35
-	{"LD HL, n", LD_r1_r2, HL, READ_8, 12},		//0x36 CHECK IF READ 8
+	{"LD HL, n", LD_HL_n, HL, READ_8, 12},		//0x36 CHECK IF READ 8
 	{"SCF", SCF, NA, NA, 4},			//0x37
 	{"JR C, n", JR_cc_n, C, READ_8, 8},		//0x38		//C is check for carry
 	{"ADD HL, SP", ADD_HL_n, HL, SP, 8},	//0x39
@@ -448,7 +442,7 @@ static INSTR opcodes[] = {
 	{"LDHL SP, n", LDHL_SP_n, SP, READ_8, 12},	//0xF8
 	{"LD SP, HL", LD_SP_HL, SP, HL, 8},	//0xF9
 	{"LD A, nn", LD_A_nn, A, READ_16, 16},		//0xFA
-	{"EI", NULL, NA, NA , 4},			//0xFB
+	{"EI", EI, NA, NA , 4},			//0xFB
 	{"XX", NULL, NA, NA , 4},			//0xFC
 	{"XX", NULL, NA, NA , 4},			//0xFD
 	{"CP n", CP_n, READ_8, READ_8, 8},			//0xFE

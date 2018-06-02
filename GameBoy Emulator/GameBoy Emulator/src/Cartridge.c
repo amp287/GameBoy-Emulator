@@ -80,10 +80,12 @@ int cart_check(unsigned char cart_type) {
 		case CART_TYPE_ROM_ONLY :
 			current_mode = CART_MODE_ROM_ONLY;
 			current_rom_bank = 1;
+			printf("Cartridge type: CART_TYPE_ROM_ONLY\n");
 			break;
 		case CART_TYPE_MBC1 :
 			current_mode = CART_MODE_MBC1_16MBIT_8KB;
 			current_rom_bank = 1;
+			printf("Cartridge type: CART_TYPE_MBC1\n");
 			break;
 		default:
 			printf("ERROR cart type (%d) not supported\n", cart_type);
@@ -94,7 +96,7 @@ int cart_check(unsigned char cart_type) {
 }
 
 int load_rom(char *path) {
-	FILE *rom = fopen("../Roms/09-op r,r.gb", "rb");
+	FILE *rom = fopen("../Roms/02-interrupts.gb", "rb");
 	unsigned char buffer[0x4000];
 	int i = 0;
 
@@ -131,52 +133,6 @@ int load_rom(char *path) {
 	return 0;
 }
 
-void switch_rom_bank(unsigned char bank) {
-	//add in checks
-	switch (cartridge_type) {
-		case CART_TYPE_MBC1:
-		case CART_TYPE_MBC1_RAM:
-		case CART_TYPE_MBC1_RAM_BATT:
-			current_rom_bank = current_rom_set + bank;
-			break;
-		
-		case CART_TYPE_MBC3_TIMER_BATT:
-		case CART_TYPE_MBC3_TIMER_RAM_BATT:
-		case CART_TYPE_MBC3:
-		case CART_TYPE_MBC3_RAM:
-		case CART_TYPE_MBC3_RAM_BATT:
-			current_rom_bank = bank;
-	}
-}
-
-void switch_rom_set(unsigned char set) {
-	if (current_mode == CART_MODE_MBC1_16MBIT_8KB) {
-		switch (set) {
-			case 0:
-				current_rom_set = 1;
-				return;
-			case 1:
-				current_rom_set = 32;
-				return;
-			case 2:
-				current_rom_set = 64;
-				return;
-			case 3:
-				current_rom_set = 96;
-		}
-	}
-}
-
-// Depending on the current mode, will either:
-// switch the current ram bank loaded on 4/32 mode, 
-// switch the current rom address significant bits.
-void switch_ram_bank_rom_set(unsigned char bank) {
-	if (current_mode == CART_MODE_MBC1_4MBIT_32KB)
-		current_ram_bank = bank;
-	else if (current_mode == CART_MODE_MBC1_16MBIT_8KB)
-		switch_rom_set(bank);
-}
-
 unsigned char read_rom_bank_8_bit(unsigned short addr, int bank_0) {
 	if (bank_0)
 		return rom_banks[0][addr];
@@ -203,9 +159,61 @@ void enable_disable_cart_ram(unsigned char val) {
 		ram_enabled = 0;
 }
 
+// Called on write to 6000-7FFF
 void switch_cart_mode(unsigned char mode) {
 	if (mode)
 		current_mode = CART_MODE_MBC1_16MBIT_8KB;
 	else
 		current_mode = CART_MODE_MBC1_4MBIT_32KB;
+}
+
+// Called on write to 2000-3FFF
+// switches ROM bank loaded into 4000-7FFF
+void switch_rom_bank(unsigned char bank) {
+	//add in checks
+	if (bank == 0)
+		bank = 1;
+
+	switch (cartridge_type) {
+	case CART_TYPE_MBC1:
+	case CART_TYPE_MBC1_RAM:
+	case CART_TYPE_MBC1_RAM_BATT:
+		current_rom_bank = current_rom_set + bank;
+		break;
+
+	case CART_TYPE_MBC3_TIMER_BATT:
+	case CART_TYPE_MBC3_TIMER_RAM_BATT:
+	case CART_TYPE_MBC3:
+	case CART_TYPE_MBC3_RAM:
+	case CART_TYPE_MBC3_RAM_BATT:
+		current_rom_bank = bank;
+	}
+}
+
+// Switches the rom set (the two most significant ROM address lines)
+void switch_rom_set(unsigned char set) {
+	switch (set) {
+	case 0:
+		current_rom_set = 1;
+		return;
+	case 1:
+		current_rom_set = 32;
+		return;
+	case 2:
+		current_rom_set = 64;
+		return;
+	case 3:
+		current_rom_set = 96;
+	}
+}
+
+// Called upon write to 4000-5FFF
+// Depending on the current mode, will either:
+// - switch the current ram bank loaded on 4/32 mode, 
+// - switch the current rom address significant bits on 16/8 mode.
+void switch_ram_bank_rom_set(unsigned char bank) {
+	if (current_mode == CART_MODE_MBC1_4MBIT_32KB)
+		current_ram_bank = bank;
+	else if (current_mode == CART_MODE_MBC1_16MBIT_8KB)
+		switch_rom_set(bank);
 }

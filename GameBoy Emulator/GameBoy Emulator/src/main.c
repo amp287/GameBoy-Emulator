@@ -7,9 +7,11 @@
 #include "Cartridge.h"
 #include "Background_Viewer.h"
 #include "Display.h"
+#include "Interrupts.h"
 
 int main(int argc, char *argv[]) {
 	char *rom = NULL;
+	int cycles = 0;
 
 	if(argc > 1){
 		rom = argv[1];
@@ -27,15 +29,16 @@ int main(int argc, char *argv[]) {
 	// clock cycles per second / FPS
 	// 4194304/60
 	
-	debug_init(0);
+	debug_init(1);
 	disable_logging();
 	while(1) {
-		int cycles = cpu_step();
+		cycles = cpu_step(cycles);
 		timer_update(cycles);
 		gpu_update(cycles);
-		//background_viewer_draw_screen();
-		check_interrupts();
 
+		// either returns 0 to reset cycles or
+		// returns the number of cycles to process an interrupt
+		cycles = check_interrupts();
 	}
 	gpu_stop();
 	background_viewer_quit();

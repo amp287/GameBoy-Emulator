@@ -16,7 +16,6 @@ void disable_logging() {
 }
 
 void debug_log(const char *fmt, ...) {
-
 	if (debug == NULL || file_num > MAX_FILES || !log_flag)
 		return;
 

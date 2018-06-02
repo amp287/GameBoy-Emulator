@@ -3,6 +3,7 @@
 #include "GPU.h"
 #include "Display.h"
 #include "Debug.h"
+#include "Interrupts.h"
 
 #define LCD_STATUS_MODE 0x3
 #define LCD_STATUS_COINCIDENCE_FLAG 0x4
@@ -70,22 +71,24 @@ void set_lcd_status(LCD_STATUS_REGISTER reg) {
 	write_8_bit(LCD_STATUS_REG, status);
 }
 
-void lcd_interrupt(LCD_STATUS_REGISTER reg) {
-
-	/*if (reg.mode_flag == LCD_STATUS_ACCESS_OAM && !reg.oam_interrupt)
-		return;
-	if (reg.mode_flag == LCD_STATUS_VERTICAL_BLANK && !reg.vblank_interrupt)
-		return;
-	if (reg.mode_flag == )
-	// Check to see if Interrupt is enabled in Stat
-	if (stat & type) {
-		if (type & LCD_STATUS_VERTICAL_BLANK_INTERRUPT && interrupt_enable & INTERRUPT_VBLANK) {
-			write_8_bit(INTERRUPT_FLAGS, interrupt | INTERRUPT_VBLANK);
-		}
-		if (interrupt_enable & INTERRUPT_LCD) {
-			write_8_bit(INTERRUPT_FLAGS, interrupt | INTERRUPT_LCD);
-		}
-	}*/
+void lcd_interrupt(LCD_STATUS_REGISTER reg, unsigned char type) {
+	switch (type) {
+		case LCD_STATUS_COINCIDENCE_INTERRUPT:
+			if (reg.coincidence_flag)
+				request_interrupt(INTERRUPT_LCD);
+			break;
+		case LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT:
+			if (reg.hblank_interrupt)
+				request_interrupt(INTERRUPT_LCD);
+			break;
+		case LCD_STATUS_VERTICAL_BLANK_INTERRUPT:
+			if (reg.vblank_interrupt)
+				request_interrupt(INTERRUPT_VBLANK);
+			break;
+		case LCD_STATUS_OAM_INTERRUPT:
+			if (reg.oam_interrupt)
+				request_interrupt(INTERRUPT_LCD);
+	}
 }
 
 // Returns color 
@@ -182,7 +185,7 @@ void update_lcd() {
 	LCD_STATUS_REGISTER status;
 	unsigned char lcd_enabled = read_8_bit(LCD_CONTROL) & LCD_ENABLED;
 	unsigned char scanline = get_scanline();
-	unsigned char mode_switch = 0;
+	unsigned char interrupt = 0;
 
 	get_lcd_status(&status);
 
@@ -196,24 +199,30 @@ void update_lcd() {
 
 	if (scanline >= 144) {
 		status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
-		mode_switch = 1;
+		interrupt =  LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
 	} else {
 
 		if (scanline_cycles >= 376) {
 			status.mode_flag = LCD_STATUS_ACCESS_OAM;
-			mode_switch = 1;
+			interrupt = LCD_STATUS_OAM_INTERRUPT;
 		} else if (scanline >= 204) {
 			status.mode_flag = LCD_STATUS_ACCESS_VRAM;
 		} else {
 			status.mode_flag = LCD_STATUS_HORIZONTAL_BLANK;
-			mode_switch = 1;
+			interrupt = LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
 		}
 	}
 
-	if (mode_switch)
-		lcd_interrupt(status);
+	if (interrupt)
+		lcd_interrupt(status, interrupt);
 
 	//check for ly == LYC interrupts
+	if (read_8_bit(LCD_SCANLINE) == read_8_bit(LCD_SCANLINE_COMPARE)) {
+		status.coincidence_flag = 1;
+		lcd_interrupt(status, LCD_STATUS_COINCIDENCE_INTERRUPT);
+	} else {
+		status.coincidence_flag = 0;
+	}
 
 	set_lcd_status(status);
 }
