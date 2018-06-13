@@ -6,6 +6,6 @@
 #define TIMER_CONTROL_FREQ_65536 0x2
 #define TIMER_CONTROL_FREQ_16384 0x3
 
-void change_freq(int freq);
-
+void set_freq();
+unsigned char get_freq();
 void timer_update(int cycles);

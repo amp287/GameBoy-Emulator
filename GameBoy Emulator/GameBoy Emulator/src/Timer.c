@@ -8,8 +8,25 @@
 
 int current_freq = TIMER_CONTROL_FREQ_4096;
 // default amount of cycles before timer goes off
-int timer_cycles = 1024; //CPU_CLOCK_SPEED / 4096;
+int timer_cycles = CPU_CLOCK_SPEED / 4096;
 int divider_cycles = 0;
+
+void reset_freq_timers() {
+	switch (current_freq) {
+	case TIMER_CONTROL_FREQ_16384:
+		timer_cycles = 256;// CPU_CLOCK_SPEED / 16384;
+		break;
+	case TIMER_CONTROL_FREQ_65536:
+		timer_cycles = 64;// CPU_CLOCK_SPEED / 65536;
+		break;
+	case TIMER_CONTROL_FREQ_262144:
+		timer_cycles = 16;// CPU_CLOCK_SPEED / 262144;
+		break;
+	case TIMER_CONTROL_FREQ_4096:
+		timer_cycles = 1024;// CPU_CLOCK_SPEED / 4096;
+		break;
+	}
+}
 
 void divider_register_update(int cycles) {
 	divider_cycles += cycles;
@@ -29,16 +46,21 @@ void timer_update(int cycles) {
 		timer_cycles -= cycles;
 
 		if (timer_cycles <= 0) {
-			//set freq
-			if (timer == 0xFF)
+
+			reset_freq_timers();
+
+			if (timer == 0xFF) {
+				write_8_bit(TIMER_MODULATOR, timer);
 				request_interrupt(INTERRUPT_TIMER);
-			else
+			} else {
 				write_8_bit(TIMER, timer + 1);
+			}
 		}
 	}
 }
 
-void change_freq(int freq) {
+void set_freq() {
+	unsigned char freq = get_freq();
 
 	if (freq == current_freq)
 		return;
@@ -61,4 +83,8 @@ void change_freq(int freq) {
 			timer_cycles = 1024;// CPU_CLOCK_SPEED / 4096;
 			break;
 	}
+}
+
+unsigned char get_freq() {
+	return read_8_bit(TIMER_CONTROL) & TIMER_CONTROL_FREQ_BITS;
 }

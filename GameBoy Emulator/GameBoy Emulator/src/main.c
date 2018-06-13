@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "Z80.h"
 #include "Memory.h"
-#include "GPU.h"
+#include "PPU.h"
 #include "Timer.h"
 #include "Debug.h"
 #include "Cartridge.h"
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 	// clock cycles per second / FPS
 	// 4194304/60
 	
-	debug_init(1);
+	debug_init(0);
 	disable_logging();
 	while(1) {
 		cycles = cpu_step(cycles);

@@ -19,12 +19,6 @@
 #define LCD_MODE_2_CYCLES 80
 #define LCD_MODE_3_CYCLES 172
 
-#define TILE_MAP_0 0x9800
-#define TILE_MAP_1 0x9C00
-#define TILE_SET_1 0x8000
-#define TILE_SET_0 0x887F
-
-#define PIXEL_COLOR 0x88
 
 void draw_screen();
 void gpu_update(int cycles);

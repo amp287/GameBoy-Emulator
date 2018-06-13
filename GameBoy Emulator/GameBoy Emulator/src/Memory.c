@@ -86,25 +86,28 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		sprite_info[addr - 0xFE00] = val;
 
 	} else if (addr < 0xFF80) {
-		if (addr == 0xFF01) {
-			debug_log_serial_output(val);
-			printf("%c", val);
+
+		//if (addr == 0xff0f && val == 0)
+		//	printf("Interrupt Flag change!");
+
+		switch (addr) {
+			case 0xFF01:
+				debug_log_serial_output(val);
+				printf("%c", val);
+				break;
+			case DIVIDER_REGISTER:
+				io[addr - 0xFF00] = 0;
+				break;
+			case TIMER_CONTROL:
+				io[addr - 0xFF00] = val;
+				set_freq();
+				break;
+			case LCD_SCANLINE:
+				io[addr - 0xFF00] = 0;
+				break;
+			default:
+				io[addr - 0xFF00] = val;
 		}
-			
-		if (addr == DIVIDER_REGISTER)
-			io[addr - 0xFF00] = 0;
-
-		if (addr == TIMER_CONTROL) {
-			change_freq(val);
-			io[addr - 0xFF00] = val;
-			return;
-		}
-
-		if (addr == LCD_SCANLINE)
-			io[addr - 0xFF00] = 0; // Reset scanline to 0
-		else
-			io[addr - 0xFF00] = val;
-
 	} else if (addr < 0x10000) {
 
 		zero_pg_ram[addr - 0xFF80] = val;
