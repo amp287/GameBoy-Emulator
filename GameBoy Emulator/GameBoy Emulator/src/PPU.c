@@ -28,6 +28,9 @@
 #define PALETTE_10 0x30
 #define PALETTE_11 0xC0
 
+int can_access_oam_ram;
+int can_access_vram;
+
 
 typedef struct LCD_STATUS_REGISTER {
 	unsigned char lyc_ly_interrupt;
@@ -166,16 +169,23 @@ void update_lcd() {
 	if (scanline >= 144) {
 		status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
 		interrupt =  LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
+		can_access_oam_ram = 1;
+		can_access_vram = 1;
 	} else {
 
 		if (scanline_cycles >= 376) {
 			status.mode_flag = LCD_STATUS_ACCESS_OAM;
+			can_access_oam_ram = 0;
 			interrupt = LCD_STATUS_OAM_INTERRUPT;
 		} else if (scanline >= 204) {
 			status.mode_flag = LCD_STATUS_ACCESS_VRAM;
+			can_access_oam_ram = 0;
+			can_access_vram = 0;
 		} else {
 			status.mode_flag = LCD_STATUS_HORIZONTAL_BLANK;
 			interrupt = LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
+			can_access_oam_ram = 1;
+			can_access_vram = 1;
 		}
 	}
 
@@ -232,6 +242,8 @@ int gpu_init() {
 	
 	quit = 0;
 	scanline_cycles = 456;
+	can_access_oam_ram = 1;
+	can_access_vram = 1;
 
 	gameboy_window = display_create_window(160, 144, window_title, key_callback);
 
@@ -241,4 +253,12 @@ int gpu_init() {
 int gpu_stop() {
 	glfwDestroyWindow(gameboy_window);
 	return 0;
+}
+
+int check_vram_access() {
+	return can_access_vram;
+}
+
+int check_oam_ram_access() {
+	return can_access_oam_ram;
 }

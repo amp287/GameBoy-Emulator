@@ -4,6 +4,7 @@
 #include "Timer.h"
 #include "Cartridge.h"
 #include "Debug.h"
+#include "PPU.h"
 
 #define ENABLE_EXTERNAL_RAM 0x2000
 #define SWITCH_ROM_BANK 0x4000
@@ -22,7 +23,10 @@ unsigned char read_8_bit(unsigned short addr) {
 	if (addr < 0x8000)
 		return read_rom_bank_8_bit(addr - 0x4000, 0);
 	if (addr < 0xA000)
-		return vram[addr - 0x8000];
+		if (check_vram_access)
+			return vram[addr - 0x8000];
+		else
+			return 0xFF;
 	if (addr < 0xC000)
 		return read_ram_bank_8_bit(addr - 0xA000);
 	if (addr < 0xE000)
@@ -30,7 +34,10 @@ unsigned char read_8_bit(unsigned short addr) {
 	if (addr < 0xFE00)
 		return internal_ram[addr - 0xE000];
 	if (addr < 0xFF00)
-		return sprite_info[addr - 0xFE00];	
+		if (check_oam_ram_access)
+			return sprite_info[addr - 0xFE00];
+		else
+			return 0xFF;
 	if (addr < 0xFF80)
 		return io[addr - 0xFF00];
 	
@@ -67,7 +74,8 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		if(addr > 0x9800)
 			debug_on_map_change();
 
-		vram[addr - 0x8000] = val;
+		if(check_vram_access())
+			vram[addr - 0x8000] = val;
 
 	} else if (addr < 0xC000) {
 
@@ -82,8 +90,8 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		internal_ram[addr - 0xE000] = val;
 
 	} else if (addr < 0xFF00) {
-
-		sprite_info[addr - 0xFE00] = val;
+		if(check_oam_ram_access())
+			sprite_info[addr - 0xFE00] = val;
 
 	} else if (addr < 0xFF80) {
 

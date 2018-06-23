@@ -96,7 +96,7 @@ int cart_check(unsigned char cart_type) {
 }
 
 int load_rom(char *path) {
-	FILE *rom = fopen("../Roms/02-interrupts.gb", "rb");
+	FILE *rom = fopen("../Roms/call_cc_timing.gb", "rb");
 	unsigned char buffer[0x4000];
 	int i = 0;
 

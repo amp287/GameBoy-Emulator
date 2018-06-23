@@ -24,3 +24,5 @@ void draw_screen();
 void gpu_update(int cycles);
 int gpu_init();
 int gpu_stop();
+int check_oam_ram_access();
+int check_vram_access();

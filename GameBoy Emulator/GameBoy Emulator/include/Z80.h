@@ -74,8 +74,8 @@ typedef struct {
 	int cycles;
 }INSTR;
 
-void cpu_init();
-void cpu_reset();
+void cpu_init(int show_bios);
+void cpu_reset(int show_bios);
 int cpu_step(int cycles);
 long cpu_fetch();
 int cpu_execute();

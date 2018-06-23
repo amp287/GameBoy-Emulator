@@ -5,6 +5,7 @@
 #include "PPU_Utils.h"
 #include "Display.h"
 #include "Background_Viewer.h"
+#include "Utils.h"
 
 // In pixels
 #define TILE_PIXEL_SIZE 8
@@ -23,8 +24,10 @@ void *lock;
 void *thread; 
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
+		background_viewer_quit();
+	}
 }
 
 void background_viewer_update_screen() {

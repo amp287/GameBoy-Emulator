@@ -8,6 +8,7 @@
 #include "Background_Viewer.h"
 #include "Display.h"
 #include "Interrupts.h"
+#include "Tile_Viewer.h"
 
 int main(int argc, char *argv[]) {
 	char *rom = NULL;
@@ -22,15 +23,16 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	cpu_init();
+	cpu_init(0);
 	display_init();
 	gpu_init();
 	background_viewer_init();
+	tile_viewer_init();
 	// clock cycles per second / FPS
 	// 4194304/60
 	
-	debug_init(0);
-	disable_logging();
+	debug_init(1);
+	enable_logging();
 	while(1) {
 		cycles = cpu_step(cycles);
 		timer_update(cycles);
@@ -42,6 +44,7 @@ int main(int argc, char *argv[]) {
 	}
 	gpu_stop();
 	background_viewer_quit();
+	tile_viewer_quit();
 	printf("Press a character and then enter to quit.\n");
 	getchar();
 	return 0;

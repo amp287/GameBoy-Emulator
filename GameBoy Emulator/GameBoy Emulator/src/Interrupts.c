@@ -24,7 +24,7 @@ int check_interrupts() {
 	if (cpu_halt_status() && !master_interrupt)
 		cpu_unhalt();
 		
-	if (master_interrupt & (enabled & flags)) {
+	if (master_interrupt && (enabled & flags)) {
 		unsigned char fired = enabled & flags;
 		unsigned short pc = 0;
 

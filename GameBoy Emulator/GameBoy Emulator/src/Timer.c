@@ -39,6 +39,8 @@ void divider_register_update(int cycles) {
 
 void timer_update(int cycles) {
 	unsigned char timer = read_8_bit(TIMER);
+
+	cycles /= 4;
 	
 	divider_register_update(cycles);
 

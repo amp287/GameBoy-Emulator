@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "Z80.h"
 #include "Memory.h"
-#include "GPU.h"
+#include "PPU.h"
 #include "Debug.h"
 #include "Interrupts.h"
 
@@ -35,10 +35,10 @@ unsigned char cpu_halt_status() {
 	return cpu.halt;
 }
 
-void cpu_init() {
+void cpu_init(int show_bios) {
 
 	load_bios();
-	cpu_reset();
+	cpu_reset(show_bios);
 }
 
 void cpu_print_reg_stack() {
@@ -54,10 +54,13 @@ int cpu_step(int cycles) {
 	cpu.m = cycles / 4;
 
 	//if (ir.instruction_index == 0x09 && cpu.af == 0x1f00 && cpu.bc == 0x000f) {
-
-	if (cpu.pc == 0xc252) {
+	//0xc252 <- where to start logging
+	if (cpu.pc == 0x100) {
 		enable_logging();
 	}
+
+	if (cpu.pc == 0xc2be)
+		printf("MOO\n");
 
 	debug_log("----------------------------------------\n");
 	debug_log("pc:%04x\n", cpu.pc);
@@ -69,13 +72,16 @@ int cpu_step(int cycles) {
 			return -1;
 
 		cpu.m = cpu.t / 4;
+	} else {
+		cpu.t += 4;
+		cpu.m = cpu.t / 4;
 	}
 
 	instr_count++;
 
 	// Remove this after testing 0xc0c2 <- called before every test
 	// instr count 25000 for bios testing 7449564
-	if (instr_count == 0x0024c76F) {
+	if (cpu.pc == 0x50) {
 		//printf("moo");
 		//if (++testnum == 1)
 		//enable_logging();
@@ -145,17 +151,23 @@ int cpu_execute() {
 	return 0;
 }
 
-void cpu_reset() {
-	cpu.a = 0x00;
-	cpu.f = 0x00;
+void cpu_reset(int show_bios) {
+	cpu.a = 0x01;
+	cpu.f = 0xB0;
 	cpu.b = 0x00;
-	cpu.c = 0x00;
+	cpu.c = 0x13;
 	cpu.d = 0x00;
-	cpu.e = 0x00;
-	cpu.h = 0x00;
-	cpu.l = 0x00;
-	cpu.sp = 0xFFFe;
-	cpu.pc = 0x0;
+	cpu.e = 0xD8;
+	cpu.h = 0x01;
+	cpu.l = 0x4D;
+	cpu.sp = 0xFFFE;
+	if (show_bios) {
+		cpu.pc = 0x0;
+	} else {
+		cpu.pc = 0x100;
+		write_8_bit(0xFF50, 1); //turn bios map off
+	}
+		
 	cpu.clock_m = 0;
 	cpu.clock_t = 0;
 	reset_master_interrupt(0);
@@ -170,7 +182,7 @@ void cpu_reset() {
 	write_8_bit(0xFF16, 0x3F);
 	write_8_bit(0xFF17, 0x00);
 	write_8_bit(0xFF19, 0xBF);
-	write_8_bit(0xFF1A, 0x7A);
+	write_8_bit(0xFF1A, 0x7F);
 	write_8_bit(0xFF1B, 0xFF);
 	write_8_bit(0xFF1C, 0x9F);
 	write_8_bit(0xFF1E, 0xBF);
@@ -192,7 +204,6 @@ void cpu_reset() {
 	write_8_bit(0xFF4A, 0x00);
 	write_8_bit(0xFF4B, 0x00);
 	write_8_bit(0xFFFF, 0x00);
-	write_8_bit(LCD_STATUS_REG, LCD_STATUS_ACCESS_OAM);
 }
 
 void clear_flag(unsigned char flag) {
