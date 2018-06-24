@@ -1,4 +1,5 @@
 #ifdef _WIN32
+
 #include<Windows.h>
 #include "Utils.h"
 
@@ -75,4 +76,5 @@ int thread_join(void *thread){
 
     return 0;
 }
+
 #endif

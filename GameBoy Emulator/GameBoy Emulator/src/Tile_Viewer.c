@@ -8,19 +8,20 @@
 
 #define WIDTH 128
 #define HEIGHT 192
+#define WINDOW_TITLE "Vram Tile Viewer"
 
 int quit;
 static GLFWwindow* tile_window;
-static const char *window_title = "Vram Tile Viewer";
+//static const char *window_title = "Vram Tile Viewer";
 static unsigned char buffer[HEIGHT][WIDTH][3];
 
-void *lock;
-void *thread;
+static void *lock;
+static void *thread;
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
-		tile_viewer_quit();
+		// Set quit logic here
 	}
 }
 
@@ -51,30 +52,24 @@ void tile_viewer_update_screen() {
 			for (pi = 0; pi < 8; pi++) {
 				for (pj = 0; pj < 8; pj++) {
 					unsigned char color = get_pixel(tile[pi] << pj);
-		
-					buffer[x + pi][y + pj][0] = color;
-					buffer[x + pi][y + pj][1] = color;
-					buffer[x + pi][y + pj][2] = color;
+					if(mutex_lock(lock) == 0) {
+						buffer[x + pi][y + pj][0] = color;
+						buffer[x + pi][y + pj][1] = color;
+						buffer[x + pi][y + pj][2] = color;
+						mutex_unlock(lock);
+					}
 				}
 			}
 		}
 	}
 }
 
-void tile_viewer_draw_screen() {
-	tile_viewer_update_screen();
-	display_poll_events(tile_window);
-	display_update_buffer(tile_window, buffer, WIDTH, HEIGHT);
-}
-
 void *tile_viewer_run(void *arg) {
 	int *quit = arg;
 	int quit_local = 0;
 
-	tile_window = display_create_window(WIDTH, HEIGHT, window_title, key_callback);
-
 	while (!quit_local) {
-		tile_viewer_draw_screen();
+		tile_viewer_update_screen();
 
 		if (mutex_lock(lock) == 0) {
 			quit_local = *quit;
@@ -87,6 +82,15 @@ void *tile_viewer_run(void *arg) {
 	return NULL;
 }
 
+void tile_viewer_update() {
+	if(mutex_lock(lock) == 0) {
+		display_update_buffer(tile_window, buffer, WIDTH, HEIGHT);
+		mutex_unlock(lock);
+	}
+	
+	display_poll_events(tile_window);
+}
+
 int tile_viewer_init() {
 	int ret = 0;
 	quit = 0;
@@ -96,6 +100,8 @@ int tile_viewer_init() {
 	if (ret != 0) {
 		return ret;
 	}
+
+	tile_window = display_create_window(WIDTH, HEIGHT, WINDOW_TITLE, key_callback);
 
 	ret = thread_create(&thread, &tile_viewer_run, &quit);
 

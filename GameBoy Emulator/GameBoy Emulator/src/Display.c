@@ -1,18 +1,22 @@
 #include <stdio.h>
 #include "Display.h"
+#include "Utils.h"
 
 int loaded = 0;
+
+static void *lock;
 
 static void error_callback(int error, const char* description)
 {
 	printf("%s\n", description);
 }
 
+// Only call this from the main thread!
 int display_init(){
+	int ret;
 
 	if (!glfwInit()) {
 		printf("ERROR\n");
-		getchar(); //TODO Remove this after Testing
 		return -1;
 	}
 
@@ -20,9 +24,17 @@ int display_init(){
 
 	glfwSetErrorCallback(error_callback);
 
+	ret = mutex_create(&lock);
+
+	if(ret != 0) {
+		printf("display_init(): mutex creation failed! (%d)\n", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
+// Only call this from the main thread!
 GLFWwindow *display_create_window(int width, int height, const char* name, GLFWkeyfun key_callback) {
 	GLFWwindow *display;
 
@@ -42,14 +54,19 @@ GLFWwindow *display_create_window(int width, int height, const char* name, GLFWk
 		getchar();
 		return NULL;
 	}
+	
+	if(mutex_lock(lock) == 0) {
 
-	glfwMakeContextCurrent(display);
+		glfwMakeContextCurrent(display);
 
-	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+		gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-	glfwSwapInterval(1);
+		glfwSwapInterval(1);
 
-	glfwSetKeyCallback(display, key_callback);
+		glfwSetKeyCallback(display, key_callback);
+
+		mutex_unlock(lock);
+	}
 	
 	return display;
 }
@@ -58,31 +75,44 @@ void display_update_buffer(GLFWwindow *display, const GLvoid *buffer, int width,
 	if(display == NULL)
 		return;
 	
-	if (glfwGetCurrentContext() != display)
-		glfwMakeContextCurrent(display);
+	if(mutex_lock(lock) == 0) {
+			
+		if (glfwGetCurrentContext() != display)
+			glfwMakeContextCurrent(display);
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glRasterPos2f(-1, 1);
-	glPixelZoom(1, -1);
-	glDrawPixels(width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glRasterPos2f(-1, 1);
+		glPixelZoom(1, -1);
+		glDrawPixels(width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
 
-	glfwSwapBuffers(display);
+		glfwSwapBuffers(display);
+
+		mutex_unlock(lock);
+	}
 }
 
+// Must be called from main thread
 void display_poll_events(GLFWwindow *display) {
 	if(display == NULL)
 		return;
-
-	if(glfwGetCurrentContext() != display)
-		glfwMakeContextCurrent(display);
 	
-	glfwPollEvents();
+	if(mutex_lock(lock) == 0) {
+			
+		if(glfwGetCurrentContext() != display)
+			glfwMakeContextCurrent(display);
+		
+		glfwPollEvents();
+
+		mutex_unlock(lock);
+	}
 }
 
+// only call from main thread!
 void display_destroy(GLFWwindow *display) {
 	glfwDestroyWindow(display);
 }
 
+// only call from main thread!
 void display_cleanup(){
 	glfwTerminate();
 }

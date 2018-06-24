@@ -20,13 +20,13 @@ static GLFWwindow* background_window;
 static const char *window_title = "Map Background Viewer";
 static unsigned char buffer[256][256][3];
 
-void *lock;
-void *thread; 
+static void *lock;
+static void *thread; 
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
-		background_viewer_quit();
+		// Set quit logic here
 	}
 }
 
@@ -46,21 +46,18 @@ void background_viewer_update_screen() {
 			for (pi = 0; pi < TILE_PIXEL_SIZE; pi++) {
 				for (pj = 0; pj < TILE_PIXEL_SIZE; pj++) {
 					unsigned char color = get_pixel(tile[pi] << pj);
-
-					buffer[x + pi][y + pj][0] = color;
-					buffer[x + pi][y + pj][1] = color;
-					buffer[x + pi][y + pj][2] = color;
+					if(mutex_lock(lock) == 0) {
+						buffer[x + pi][y + pj][0] = color;
+						buffer[x + pi][y + pj][1] = color;
+						buffer[x + pi][y + pj][2] = color;
+						mutex_unlock(lock);
+					}
 				}
 			}
 		}
 	}
 }
 
-void background_viewer_draw_screen() {
-	background_viewer_update_screen();
-	display_poll_events(background_window);
-	display_update_buffer(background_window, buffer, 256, 256);
-}
 
 void *background_viewer_get_thread(){
 	return thread;
@@ -69,11 +66,9 @@ void *background_viewer_get_thread(){
 void *background_viewer_run(void *arg){
 	int *quit = arg;
 	int quit_local = 0;
-	
-	background_window = display_create_window(256, 256, window_title, key_callback);
 
 	while(!quit_local){
-		background_viewer_draw_screen();
+		background_viewer_update_screen();
 
 		if(mutex_lock(lock) == 0){
 			quit_local = *quit;	
@@ -96,6 +91,8 @@ int background_viewer_init() {
 		return ret;
 	}
 
+	background_window = display_create_window(256, 256, window_title, key_callback);
+
 	ret = thread_create(&thread, &background_viewer_run, &quit);//pthread_create(&thread, NULL, &background_viewer_run, &quit);
 
 	if(ret != 0){
@@ -106,6 +103,16 @@ int background_viewer_init() {
 	return 0;
 }
 
+void background_viewer_update() {
+	if(mutex_lock(lock) == 0) {
+		display_update_buffer(background_window, buffer, 256, 256);
+		mutex_unlock(lock);
+	}
+	
+	display_poll_events(background_window);
+}
+
+// Should be called on a different thread
 int background_viewer_quit(){
 	int ret = 0;
 

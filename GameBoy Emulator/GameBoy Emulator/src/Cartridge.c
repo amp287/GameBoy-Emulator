@@ -96,9 +96,11 @@ int cart_check(unsigned char cart_type) {
 }
 
 int load_rom(char *path) {
-	FILE *rom = fopen("../Roms/call_cc_timing.gb", "rb");
+	FILE *rom;
 	unsigned char buffer[0x4000];
 	int i = 0;
+
+	rom = fopen(path, "rb");
 
 	if(rom == NULL)
 		return -1;

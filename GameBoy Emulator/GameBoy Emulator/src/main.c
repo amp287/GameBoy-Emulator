@@ -14,9 +14,10 @@ int main(int argc, char *argv[]) {
 	char *rom = NULL;
 	int cycles = 0;
 
-	if(argc > 1){
+	if(argc > 1)
 		rom = argv[1];
-	}
+	else
+		rom = "../Roms/cpu_instrs.gb";
 
 	if (load_rom(rom) != 0) {
 		printf("Error loading rom\n");
@@ -31,8 +32,8 @@ int main(int argc, char *argv[]) {
 	// clock cycles per second / FPS
 	// 4194304/60
 	
-	debug_init(1);
-	enable_logging();
+	debug_init(0);
+	//enable_logging();
 	while(1) {
 		cycles = cpu_step(cycles);
 		timer_update(cycles);
@@ -41,6 +42,9 @@ int main(int argc, char *argv[]) {
 		// either returns 0 to reset cycles or
 		// returns the number of cycles to process an interrupt
 		cycles = check_interrupts();
+
+		background_viewer_update();
+		tile_viewer_update();
 	}
 	gpu_stop();
 	background_viewer_quit();

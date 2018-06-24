@@ -51,6 +51,7 @@ void debug_init(int log_arg) {
 	lines = 0;
 	file_num = 0;
 	map_change = 0;
+	log_flag = log_arg;
 
 	if (log_arg)
 		debug = fopen("log/Debug.txt", "w");
@@ -61,5 +62,6 @@ void debug_init(int log_arg) {
 }
 
 void debug_log_serial_output(unsigned char byte) {
-	fprintf(serial_output, "%c", byte);
+	if(log_flag)
+		fprintf(serial_output, "%c", byte);
 }
