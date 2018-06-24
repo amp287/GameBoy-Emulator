@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
 	cpu_init(0);
 	display_init();
 	gpu_init();
-	background_viewer_init();
-	tile_viewer_init();
+	//background_viewer_init();
+	//tile_viewer_init();
 	// clock cycles per second / FPS
 	// 4194304/60
 	
@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
 		// returns the number of cycles to process an interrupt
 		cycles = check_interrupts();
 
-		background_viewer_update();
-		tile_viewer_update();
+		//background_viewer_update();
+		//tile_viewer_update();
 	}
 	gpu_stop();
 	background_viewer_quit();
