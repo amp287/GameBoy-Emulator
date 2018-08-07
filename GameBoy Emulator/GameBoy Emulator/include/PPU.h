@@ -26,3 +26,4 @@ int gpu_init();
 int gpu_stop();
 int check_oam_ram_access();
 int check_vram_access();
+void ppu_dma_transfer(unsigned char address);

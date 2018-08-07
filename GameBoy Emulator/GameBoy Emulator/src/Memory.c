@@ -90,8 +90,8 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		internal_ram[addr - 0xE000] = val;
 
 	} else if (addr < 0xFF00) {
-		if(check_oam_ram_access())
-			sprite_info[addr - 0xFE00] = val;
+		if (addr == 0xFF46)
+			ppu_dma_transfer(val);
 
 	} else if (addr < 0xFF80) {
 
@@ -100,7 +100,7 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 
 		switch (addr) {
 			case 0xFF01:
-				debug_log_serial_output(val);
+				//debug_log_serial_output(val);
 				printf("%c", val);
 				break;
 			case DIVIDER_REGISTER:

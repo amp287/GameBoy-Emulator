@@ -51,6 +51,20 @@ int scanline_cycles;
 
 static unsigned char screen_buffer[144][160][3];
 
+void ppu_dma_transfer(unsigned char address) {
+	// multiply by 100 to get real address
+	// http://www.codeslinger.co.uk/pages/projects/gameboy/dma.html
+	unsigned short real_address = address >> 8;
+
+	if (!can_access_oam_ram)
+		return;
+
+	for (int i = 0; i < 0xA0; i++)
+	{
+		write_8_bit(0xFE00 + i, read_8_bit(real_address + i));
+	}
+}
+
 void set_scanline(unsigned char line) {
 	io[LCD_SCANLINE - 0xFF00] = line;
 }

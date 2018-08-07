@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	cpu_init(0);
+	cpu_init(1);
 	display_init();
 	gpu_init();
 	//background_viewer_init();
