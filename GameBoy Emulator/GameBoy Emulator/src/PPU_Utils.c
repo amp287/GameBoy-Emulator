@@ -19,11 +19,15 @@
 
 static unsigned char default_palette[4] = { 255, 192, 96, 0 };
 
-unsigned short get_tile_address(unsigned short map_index) {
+unsigned short get_tile_address(unsigned short map_index, unsigned char using_window) {
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
-	unsigned short tile_map = lcd_control & BG_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
 	unsigned short tile_set = lcd_control & BG_AND_WINDOW_TILE_DATA_SELECT ? TILE_SET_1 : TILE_SET_0;
+	unsigned short tile_map;
 
+	if (lcd_control & WINDOW_DISP_ENABLE)
+		tile_map = lcd_control & WINDOW_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
+	else 
+		tile_map = lcd_control & BG_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
 
 	char tile_id = read_8_bit(tile_map + map_index);
 
@@ -35,9 +39,9 @@ unsigned short get_tile_address(unsigned short map_index) {
 }
 
 // Returns tile in tile_out
-void get_tile(unsigned short *tile_out, unsigned char map_x, unsigned char map_y) {
+void get_tile(unsigned short *tile_out, unsigned char map_x, unsigned char map_y, unsigned char using_window) {
 	int i;
-	unsigned short tile_addr = get_tile_address(map_x + map_y * MAP_TILE_SIZE);
+	unsigned short tile_addr = get_tile_address(map_x + map_y * MAP_TILE_SIZE, using_window);
 
 	for (i = 0; i < 8; i++)
 		tile_out[i] = read_16_bit(tile_addr + (i * TILE_ROW_BYTES));

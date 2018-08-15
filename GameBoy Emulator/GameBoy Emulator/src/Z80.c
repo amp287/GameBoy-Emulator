@@ -53,17 +53,8 @@ int cpu_step(int cycles) {
 	cpu.t = cycles;
 	cpu.m = cycles / 4;
 
-	//if (ir.instruction_index == 0x09 && cpu.af == 0x1f00 && cpu.bc == 0x000f) {
-	//0xc252 <- where to start logging
-	if (cpu.pc == 0x100) {
-		enable_logging();
-	}
-
-	if (cpu.pc == 0xc2be)
-		printf("MOO\n");
-
-	debug_log("----------------------------------------\n");
-	debug_log("pc:%04x\n", cpu.pc);
+	//debug_log("----------------------------------------\n");
+	debug_log("pc:%04x", cpu.pc);
 
 	if (!cpu.halt) {
 		cpu.t += cpu_fetch();
@@ -77,25 +68,12 @@ int cpu_step(int cycles) {
 		cpu.m = cpu.t / 4;
 	}
 
-	instr_count++;
-
-	// Remove this after testing 0xc0c2 <- called before every test
-	// instr count 25000 for bios testing 7449564
-	if (cpu.pc == 0x50) {
-		//printf("moo");
-		//if (++testnum == 1)
-		//enable_logging();
-	}
-
-	//if (cpu.pc == 0xC2ec && cpu.af == 0x1020 && cpu.hl == 0xc6be)
-	//	printf("HI THERE\n");
-	//0xDEF8
-
-
 	cpu.clock_t += cpu.t;
 	cpu.clock_m += cpu.m;
 
-	cpu_print_reg_stack();
+	debug_log(" step:%d PPU ticks:%d PPU mode:%d\n", instr_count++, 456 - ppu_ticks + cpu.t, ppu_mode);
+
+	//cpu_print_reg_stack();
 
 	return cpu.t;
 }

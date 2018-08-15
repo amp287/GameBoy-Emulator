@@ -101,7 +101,7 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		switch (addr) {
 			case 0xFF01:
 				//debug_log_serial_output(val);
-				printf("%c", val);
+				//printf("%c", val);
 				break;
 			case DIVIDER_REGISTER:
 				io[addr - 0xFF00] = 0;

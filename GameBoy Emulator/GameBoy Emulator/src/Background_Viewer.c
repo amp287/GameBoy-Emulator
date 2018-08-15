@@ -41,7 +41,7 @@ void background_viewer_update_screen() {
 			x = i * TILE_PIXEL_SIZE;
 			y = j * TILE_PIXEL_SIZE;
 
-			get_tile(tile, j, i);
+			get_tile(tile, j, i, 0);
 
 			for (pi = 0; pi < TILE_PIXEL_SIZE; pi++) {
 				for (pj = 0; pj < TILE_PIXEL_SIZE; pj++) {

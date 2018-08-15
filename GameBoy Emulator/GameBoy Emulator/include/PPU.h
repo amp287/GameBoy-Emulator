@@ -19,7 +19,6 @@
 #define LCD_MODE_2_CYCLES 80
 #define LCD_MODE_3_CYCLES 172
 
-
 void draw_screen();
 void gpu_update(int cycles);
 int gpu_init();
@@ -27,3 +26,7 @@ int gpu_stop();
 int check_oam_ram_access();
 int check_vram_access();
 void ppu_dma_transfer(unsigned char address);
+
+// FOR DEBUGGING
+int ppu_mode;
+int ppu_ticks;

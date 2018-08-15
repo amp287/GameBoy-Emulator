@@ -54,7 +54,7 @@ static unsigned char screen_buffer[144][160][3];
 void ppu_dma_transfer(unsigned char address) {
 	// multiply by 100 to get real address
 	// http://www.codeslinger.co.uk/pages/projects/gameboy/dma.html
-	unsigned short real_address = address >> 8;
+	unsigned short real_address = address << 8;
 
 	if (!can_access_oam_ram)
 		return;
@@ -124,6 +124,8 @@ void update_scanline() {
 	unsigned char color;
 	unsigned char scroll_y = read_8_bit(SCROLL_Y);
 	unsigned char scroll_x = read_8_bit(SCROLL_X);
+	unsigned char window_x = read_8_bit(WINDOW_X) - 7;
+	unsigned char window_y = read_8_bit(WINDOW_Y);
 	unsigned char scanline = get_scanline();
 
 	// scroll_y is a pixel (0-255) divide by TILE_ROWS to get tile
@@ -133,11 +135,20 @@ void update_scanline() {
 	unsigned char tile_y_row = (scroll_y + scanline) % TILE_ROWS;
 	unsigned char tile_x_col = scroll_x % TILE_ROWS;
 
+	unsigned char window_on = read_8_bit(LCD_CONTROL) & WINDOW_DISP_ENABLE;
+
+	if (window_on)
+		if (window_y > scanline)
+			window_on = 0;
+			
 	while (pixel < 160) {
 		unsigned short tile[8];
 		int start = pixel == 0 ? tile_x_col : 0;
 
-		get_tile(tile, tile_map_id_x, tile_map_id_y);
+		if (window_on && pixel >= window_x)
+			get_tile(tile, tile_map_id_x - (window_x / 8), tile_map_id_y, window_on);
+		else
+			get_tile(tile, tile_map_id_x, tile_map_id_y, window_on);
 
 		for (i = start; i < TILE_ROWS; i++) {
 			if (pixel == 160) break;
@@ -187,15 +198,15 @@ void update_lcd() {
 		can_access_vram = 1;
 	} else {
 
-		if (scanline_cycles >= 376) {
+		if (scanline_cycles <= 456 && status.mode_flag != LCD_STATUS_ACCESS_OAM) {
 			status.mode_flag = LCD_STATUS_ACCESS_OAM;
 			can_access_oam_ram = 0;
 			interrupt = LCD_STATUS_OAM_INTERRUPT;
-		} else if (scanline >= 204) {
+		} else if (scanline_cycles < 376 && status.mode_flag != LCD_STATUS_ACCESS_VRAM) {
 			status.mode_flag = LCD_STATUS_ACCESS_VRAM;
 			can_access_oam_ram = 0;
 			can_access_vram = 0;
-		} else {
+		} else if(scanline_cycles < 204 && status.mode_flag != LCD_STATUS_HORIZONTAL_BLANK){
 			status.mode_flag = LCD_STATUS_HORIZONTAL_BLANK;
 			interrupt = LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
 			can_access_oam_ram = 1;
@@ -215,6 +226,9 @@ void update_lcd() {
 	}
 
 	set_lcd_status(status);
+
+	// FOR DEBUGGING
+	ppu_mode = status.mode_flag;
 }
 
 void gpu_update(int cycles) {
@@ -223,12 +237,12 @@ void gpu_update(int cycles) {
 
 	display_poll_events(gameboy_window);
 
-	update_lcd();
-
 	if (lcd_enabled)
 		scanline_cycles -= cycles;
 	else
 		return;
+
+	update_lcd();
 
 	if (scanline_cycles <= 0) {
 
@@ -244,6 +258,9 @@ void gpu_update(int cycles) {
 		else if (scanline > 153)
 			set_scanline(0);
 	}
+
+	// FOR DEBUGGING
+	ppu_ticks = scanline_cycles;
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -256,6 +273,9 @@ int gpu_init() {
 	
 	quit = 0;
 	scanline_cycles = 456;
+
+	// FOR DEBUGGNG
+	ppu_ticks = scanline_cycles;
 	can_access_oam_ram = 1;
 	can_access_vram = 1;
 
