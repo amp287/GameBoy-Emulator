@@ -175,7 +175,7 @@ void render_scanline() {
 		;//render_sprites();
 }
 
-void update_lcd() {
+void update_lcd_state(int cycles) {
 	LCD_STATUS_REGISTER status;
 	unsigned char lcd_enabled = read_8_bit(LCD_CONTROL) & LCD_ENABLED;
 	unsigned char scanline = get_scanline();
@@ -188,25 +188,44 @@ void update_lcd() {
 		set_scanline(0);
 		status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
 		set_lcd_status(status);
+
+		// FOR DEBUGGING
+		ppu_mode = status.mode_flag;
+		ppu_ticks = scanline_cycles;
+		debug_log("ly:%d PPU ticks:%d PPU mode:%d\n", scanline, 456 - ppu_ticks, ppu_mode);
 		return;
 	}
 
+	scanline_cycles -= cycles;
+
+	if (scanline_cycles < 0) {
+		set_scanline(++scanline);
+		scanline_cycles = 456 + scanline_cycles;
+	}
+
 	if (scanline >= 144) {
-		status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
-		interrupt =  LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
-		can_access_oam_ram = 1;
-		can_access_vram = 1;
+		if (status.mode_flag != LCD_STATUS_VERTICAL_BLANK) {
+			status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
+			interrupt = LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
+			can_access_oam_ram = 1;
+			can_access_vram = 1;
+		}
+
+		// after 4 clocks in 153 lcd changes to scanline 0
+		if (scanline == 153 && scanline_cycles <= 456 - 4)
+			set_scanline(0);
+
 	} else {
 
-		if (scanline_cycles <= 456 && status.mode_flag != LCD_STATUS_ACCESS_OAM) {
+		if (scanline_cycles <= 456 && scanline_cycles >= 376 && status.mode_flag != LCD_STATUS_ACCESS_OAM) {
 			status.mode_flag = LCD_STATUS_ACCESS_OAM;
 			can_access_oam_ram = 0;
 			interrupt = LCD_STATUS_OAM_INTERRUPT;
-		} else if (scanline_cycles < 376 && status.mode_flag != LCD_STATUS_ACCESS_VRAM) {
+		} else if (scanline_cycles < 376 && scanline_cycles > 204 && status.mode_flag != LCD_STATUS_ACCESS_VRAM) {
 			status.mode_flag = LCD_STATUS_ACCESS_VRAM;
 			can_access_oam_ram = 0;
 			can_access_vram = 0;
-		} else if(scanline_cycles < 204 && status.mode_flag != LCD_STATUS_HORIZONTAL_BLANK){
+		} else if(scanline_cycles <= 204 && status.mode_flag != LCD_STATUS_HORIZONTAL_BLANK){
 			status.mode_flag = LCD_STATUS_HORIZONTAL_BLANK;
 			interrupt = LCD_STATUS_HORIZONTAL_BLANK_INTERRUPT;
 			can_access_oam_ram = 1;
@@ -218,7 +237,7 @@ void update_lcd() {
 		lcd_interrupt(status, interrupt);
 
 	//check for ly == LYC interrupts
-	if (read_8_bit(LCD_SCANLINE) == read_8_bit(LCD_SCANLINE_COMPARE)) {
+	if (get_scanline() == read_8_bit(LCD_SCANLINE_COMPARE)) {
 		status.coincidence_flag = 1;
 		lcd_interrupt(status, LCD_STATUS_COINCIDENCE_INTERRUPT);
 	} else {
@@ -229,6 +248,8 @@ void update_lcd() {
 
 	// FOR DEBUGGING
 	ppu_mode = status.mode_flag;
+	ppu_ticks = scanline_cycles;
+	debug_log("ly:%d PPU ticks:%d PPU mode: %d\n", get_scanline(), 456 - ppu_ticks, ppu_mode);
 }
 
 void gpu_update(int cycles) {
@@ -237,30 +258,13 @@ void gpu_update(int cycles) {
 
 	display_poll_events(gameboy_window);
 
-	if (lcd_enabled)
-		scanline_cycles -= cycles;
-	else
-		return;
+	update_lcd_state(cycles);
 
-	update_lcd();
+	if (scanline < 144 && !can_access_vram)
+		render_scanline();
 
-	if (scanline_cycles <= 0) {
-
-		if (scanline < 144)
-			render_scanline();
-
-		set_scanline(++scanline);
-
-		scanline_cycles = 456;
-
-		if (scanline == 144)
-			display_update_buffer(gameboy_window, screen_buffer, 160, 144);//vblank interrupt?
-		else if (scanline > 153)
-			set_scanline(0);
-	}
-
-	// FOR DEBUGGING
-	ppu_ticks = scanline_cycles;
+	if (scanline == 144)
+		display_update_buffer(gameboy_window, screen_buffer, 160, 144);//vblank interrupt?
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)

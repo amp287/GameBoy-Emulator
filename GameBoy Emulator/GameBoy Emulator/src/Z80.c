@@ -53,7 +53,6 @@ int cpu_step(int cycles) {
 	cpu.t = cycles;
 	cpu.m = cycles / 4;
 
-	//debug_log("----------------------------------------\n");
 	debug_log("pc:%04x", cpu.pc);
 
 	if (!cpu.halt) {
@@ -71,7 +70,12 @@ int cpu_step(int cycles) {
 	cpu.clock_t += cpu.t;
 	cpu.clock_m += cpu.m;
 
-	debug_log(" step:%d PPU ticks:%d PPU mode:%d\n", instr_count++, 456 - ppu_ticks + cpu.t, ppu_mode);
+	debug_log(" af:%04x bc:%04x de:%04x hl:%04x step:%d ", cpu.af, cpu.bc, cpu.de, cpu.hl, instr_count++);
+
+	if (instr_count == 187)
+	{
+		printf("moo\n");
+	}
 
 	//cpu_print_reg_stack();
 
