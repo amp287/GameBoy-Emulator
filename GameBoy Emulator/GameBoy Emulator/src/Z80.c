@@ -36,7 +36,6 @@ unsigned char cpu_halt_status() {
 }
 
 void cpu_init(int show_bios) {
-
 	load_bios();
 	cpu_reset(show_bios);
 }
@@ -49,17 +48,26 @@ void cpu_print_reg_stack() {
 	debug_log("\n\n");
 }
 
-int cpu_step(int cycles) {
+int cpu_gpu_step(int cycles) {
+	int cycles_before_exe;
 	cpu.t = cycles;
 	cpu.m = cycles / 4;
 
 	debug_log("pc:%04x", cpu.pc);
 
+
 	if (!cpu.halt) {
 		cpu.t += cpu_fetch();
 
+		cycles_before_exe = cpu.t;
+
+		gpu_update(cpu.t);
+
 		if (cpu_execute())
 			return -1;
+
+		// in case of jump or execution changes something (lcdc)
+		gpu_update(cpu.t - cycles_before_exe);
 
 		cpu.m = cpu.t / 4;
 	} else {
@@ -71,11 +79,7 @@ int cpu_step(int cycles) {
 	cpu.clock_m += cpu.m;
 
 	debug_log(" af:%04x bc:%04x de:%04x hl:%04x step:%d ", cpu.af, cpu.bc, cpu.de, cpu.hl, instr_count++);
-
-	if (instr_count == 187)
-	{
-		printf("moo\n");
-	}
+	debug_log("ly:%d PPU ticks:%d PPU mode: %d\n", ppu_scanline, 456 - ppu_ticks, ppu_mode);
 
 	//cpu_print_reg_stack();
 
@@ -321,6 +325,7 @@ void LDH_n_A(unsigned short NA, unsigned short n) {
 }
 
 void LDH_A_n(unsigned short A, unsigned short n) {
+
 	cpu.a = read_8_bit(0xFF00 + n);
 }
 

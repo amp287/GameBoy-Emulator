@@ -30,3 +30,4 @@ void ppu_dma_transfer(unsigned char address);
 // FOR DEBUGGING
 int ppu_mode;
 int ppu_ticks;
+int ppu_scanline;

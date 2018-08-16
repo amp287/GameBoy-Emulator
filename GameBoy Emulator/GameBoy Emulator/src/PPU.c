@@ -28,10 +28,6 @@
 #define PALETTE_10 0x30
 #define PALETTE_11 0xC0
 
-int can_access_oam_ram;
-int can_access_vram;
-
-
 typedef struct LCD_STATUS_REGISTER {
 	unsigned char lyc_ly_interrupt;
 	unsigned char oam_interrupt;
@@ -44,6 +40,10 @@ typedef struct LCD_STATUS_REGISTER {
 static const char *window_title = "Gameboy";
 static int quit;
 static GLFWwindow* gameboy_window;
+int has_scanline_rendered;
+int has_updated_display;
+int can_access_oam_ram;
+int can_access_vram;
 
 int x = 0;
 // It takes the GPU 456 cycles to draw one scanline
@@ -168,6 +168,9 @@ void render_scanline() {
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
 	unsigned char current_scanline = read_8_bit(LCD_SCANLINE);
 
+	// scanline al
+	has_scanline_rendered = 1;
+	
 	if (lcd_control & BG_DISPLAY)
 		update_scanline();
 
@@ -186,21 +189,22 @@ void update_lcd_state(int cycles) {
 	if (!lcd_enabled) {
 		scanline_cycles = 456;
 		set_scanline(0);
-		status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
+		status.mode_flag = LCD_STATUS_HORIZONTAL_BLANK;
 		set_lcd_status(status);
 
 		// FOR DEBUGGING
 		ppu_mode = status.mode_flag;
 		ppu_ticks = scanline_cycles;
-		debug_log("ly:%d PPU ticks:%d PPU mode:%d\n", scanline, 456 - ppu_ticks, ppu_mode);
+		ppu_scanline = get_scanline();
 		return;
 	}
 
 	scanline_cycles -= cycles;
 
-	if (scanline_cycles < 0) {
+	if (scanline_cycles < 0 && scanline != 153) {
 		set_scanline(++scanline);
 		scanline_cycles = 456 + scanline_cycles;
+		has_scanline_rendered = 0;
 	}
 
 	if (scanline >= 144) {
@@ -212,9 +216,11 @@ void update_lcd_state(int cycles) {
 		}
 
 		// after 4 clocks in 153 lcd changes to scanline 0
-		if (scanline == 153 && scanline_cycles <= 456 - 4)
+		if (scanline == 153 && scanline_cycles <= -4) {
 			set_scanline(0);
-
+			has_updated_display = 0;
+		}
+			
 	} else {
 
 		if (scanline_cycles <= 456 && scanline_cycles >= 376 && status.mode_flag != LCD_STATUS_ACCESS_OAM) {
@@ -249,7 +255,7 @@ void update_lcd_state(int cycles) {
 	// FOR DEBUGGING
 	ppu_mode = status.mode_flag;
 	ppu_ticks = scanline_cycles;
-	debug_log("ly:%d PPU ticks:%d PPU mode: %d\n", get_scanline(), 456 - ppu_ticks, ppu_mode);
+	ppu_scanline = get_scanline();
 }
 
 void gpu_update(int cycles) {
@@ -260,11 +266,13 @@ void gpu_update(int cycles) {
 
 	update_lcd_state(cycles);
 
-	if (scanline < 144 && !can_access_vram)
+	if(!has_scanline_rendered && !can_access_vram)
 		render_scanline();
 
-	if (scanline == 144)
+	if (lcd_enabled && !has_updated_display && scanline == 144) {
+		has_updated_display = 1;
 		display_update_buffer(gameboy_window, screen_buffer, 160, 144);//vblank interrupt?
+	}
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -277,9 +285,13 @@ int gpu_init() {
 	
 	quit = 0;
 	scanline_cycles = 456;
+	has_scanline_rendered = 0;
+	has_updated_display = 0;
 
 	// FOR DEBUGGNG
 	ppu_ticks = scanline_cycles;
+	ppu_scanline = 0;
+	
 	can_access_oam_ram = 1;
 	can_access_vram = 1;
 

@@ -35,9 +35,8 @@ int main(int argc, char *argv[]) {
 	debug_init(0);
 	//enable_logging();
 	while(1) {
-		cycles = cpu_step(cycles);
+		cycles = cpu_gpu_step(cycles);
 		timer_update(cycles);
-		gpu_update(cycles);
 
 		// either returns 0 to reset cycles or
 		// returns the number of cycles to process an interrupt

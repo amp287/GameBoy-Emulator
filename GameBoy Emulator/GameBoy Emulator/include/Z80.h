@@ -76,7 +76,7 @@ typedef struct {
 
 void cpu_init(int show_bios);
 void cpu_reset(int show_bios);
-int cpu_step(int cycles);
+int cpu_gpu_step(int cycles);
 long cpu_fetch();
 int cpu_execute();
 
