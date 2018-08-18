@@ -9,11 +9,13 @@
 #define WIDTH 128
 #define HEIGHT 192
 #define WINDOW_TITLE "Vram Tile Viewer"
+#define DELAY 1000
 
 int quit;
 static GLFWwindow* tile_window;
 //static const char *window_title = "Vram Tile Viewer";
 static unsigned char buffer[HEIGHT][WIDTH][3];
+int counter;
 
 static void *lock;
 static void *thread;
@@ -75,6 +77,8 @@ void *tile_viewer_run(void *arg) {
 			quit_local = *quit;
 			mutex_unlock(lock);
 		}
+
+		sleep(1000);
 	}
 
 	display_destroy(tile_window);
@@ -83,6 +87,11 @@ void *tile_viewer_run(void *arg) {
 }
 
 void tile_viewer_update() {
+	if (++counter != DELAY)
+		return;
+	
+	counter = 0;
+
 	if(mutex_lock(lock) == 0) {
 		display_update_buffer(tile_window, buffer, WIDTH, HEIGHT);
 		mutex_unlock(lock);
@@ -94,6 +103,7 @@ void tile_viewer_update() {
 int tile_viewer_init() {
 	int ret = 0;
 	quit = 0;
+	counter = 0;
 
 	ret = mutex_create(&lock);
 

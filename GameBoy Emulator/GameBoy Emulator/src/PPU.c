@@ -96,11 +96,12 @@ void set_lcd_status(LCD_STATUS_REGISTER reg) {
 	status = status << 2;
 	status |= reg.mode_flag;
 
-	write_8_bit(LCD_STATUS_REG, status);
+	io[LCD_STATUS_REG - 0xFF00] = status;
 }
 
 void lcd_interrupt(LCD_STATUS_REGISTER reg, unsigned char type) {
 	switch (type) {
+
 		case LCD_STATUS_COINCIDENCE_INTERRUPT:
 			if (reg.coincidence_flag)
 				request_interrupt(INTERRUPT_LCD);
@@ -111,7 +112,7 @@ void lcd_interrupt(LCD_STATUS_REGISTER reg, unsigned char type) {
 			break;
 		case LCD_STATUS_VERTICAL_BLANK_INTERRUPT:
 			if (reg.vblank_interrupt)
-				request_interrupt(INTERRUPT_VBLANK);
+				request_interrupt(INTERRUPT_LCD);
 			break;
 		case LCD_STATUS_OAM_INTERRUPT:
 			if (reg.oam_interrupt)
@@ -211,14 +212,17 @@ void update_lcd_state(int cycles) {
 		if (status.mode_flag != LCD_STATUS_VERTICAL_BLANK) {
 			status.mode_flag = LCD_STATUS_VERTICAL_BLANK;
 			interrupt = LCD_STATUS_VERTICAL_BLANK_INTERRUPT;
+			request_interrupt(INTERRUPT_VBLANK);
 			can_access_oam_ram = 1;
 			can_access_vram = 1;
 		}
 
 		// after 4 clocks in 153 lcd changes to scanline 0
-		if (scanline == 153 && scanline_cycles <= -4) {
+		if (scanline == 153 && scanline_cycles <= 456 - 4) {
 			set_scanline(0);
 			has_updated_display = 0;
+			// we want to finish 153 even though it says 0
+			scanline_cycles += 456;
 		}
 			
 	} else {

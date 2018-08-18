@@ -19,3 +19,5 @@ int thread_create(void **thread, thread_func func, void *args);
 int thread_join(void *thead_id);
 
 int create_directory(char *path);
+
+void sleep(int ms);

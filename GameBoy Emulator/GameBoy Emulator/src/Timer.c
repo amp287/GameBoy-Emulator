@@ -40,7 +40,7 @@ void divider_register_update(int cycles) {
 void timer_update(int cycles) {
 	unsigned char timer = read_8_bit(TIMER);
 
-	cycles /= 4;
+	//cycles /= 4;
 	
 	divider_register_update(cycles);
 
@@ -52,7 +52,7 @@ void timer_update(int cycles) {
 			reset_freq_timers();
 
 			if (timer == 0xFF) {
-				write_8_bit(TIMER_MODULATOR, timer);
+				write_8_bit(TIMER, read_8_bit(TIMER_MODULATOR));
 				request_interrupt(INTERRUPT_TIMER);
 			} else {
 				write_8_bit(TIMER, timer + 1);

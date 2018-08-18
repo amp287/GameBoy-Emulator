@@ -77,4 +77,8 @@ int thread_join(void *thread){
     return 0;
 }
 
+void sleep(int ms) {
+	Sleep(ms);
+}
+
 #endif

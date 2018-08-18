@@ -53,8 +53,11 @@ int cpu_gpu_step(int cycles) {
 	cpu.t = cycles;
 	cpu.m = cycles / 4;
 
-	debug_log("pc:%04x", cpu.pc);
+	if (instr_count == 12429) {
+		enable_logging();
+	}
 
+	debug_log("pc:%04x", cpu.pc);
 
 	if (!cpu.halt) {
 		cpu.t += cpu_fetch();
@@ -67,7 +70,8 @@ int cpu_gpu_step(int cycles) {
 			return -1;
 
 		// in case of jump or execution changes something (lcdc)
-		gpu_update(cpu.t - cycles_before_exe);
+		if(cpu.t - cycles_before_exe > 0)
+			gpu_update(cpu.t - cycles_before_exe);
 
 		cpu.m = cpu.t / 4;
 	} else {
@@ -79,7 +83,8 @@ int cpu_gpu_step(int cycles) {
 	cpu.clock_m += cpu.m;
 
 	debug_log(" af:%04x bc:%04x de:%04x hl:%04x step:%d ", cpu.af, cpu.bc, cpu.de, cpu.hl, instr_count++);
-	debug_log("ly:%d PPU ticks:%d PPU mode: %d\n", ppu_scanline, 456 - ppu_ticks, ppu_mode);
+	//debug_log("\n");
+	debug_log("ly:%d PPU ticks:%d PPU mode: %d\n", ppu_scanline, ppu_ticks > 456 ?  912 - ppu_ticks : 456 - ppu_ticks, ppu_mode);
 
 	//cpu_print_reg_stack();
 
@@ -180,6 +185,7 @@ void cpu_reset(int show_bios) {
 	write_8_bit(0xFF25, 0xF3);
 	write_8_bit(0xFF26, 0xF1);
 	write_8_bit(0xFF40, 0x91);
+	write_8_bit(0xFF41, 0x85);
 	write_8_bit(0xFF42, 0x00);
 	write_8_bit(0xFF43, 0x00);
 	write_8_bit(0xFF44, 0x00);

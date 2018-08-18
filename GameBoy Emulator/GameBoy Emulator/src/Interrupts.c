@@ -21,7 +21,7 @@ int check_interrupts() {
 	if (waiting_reset && --waiting_reset == 0)
 		reset_master_interrupt(0);*/
 
-	if (cpu_halt_status() && !master_interrupt)
+	if (cpu_halt_status())
 		cpu_unhalt();
 		
 	if (master_interrupt && (enabled & flags)) {
@@ -29,8 +29,6 @@ int check_interrupts() {
 		unsigned short pc = 0;
 
 		master_interrupt = 0;
-
-		cpu_unhalt();
 
 		if (fired & INTERRUPT_VBLANK) {
 			pc = 0x40;

@@ -90,9 +90,9 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		internal_ram[addr - 0xE000] = val;
 
 	} else if (addr < 0xFF00) {
-		if (addr == 0xFF46)
-			ppu_dma_transfer(val);
-
+		// sprite info
+		if (check_oam_ram_access)
+			sprite_info[addr - 0xFE00] = val;
 	} else if (addr < 0xFF80) {
 
 		//if (addr == 0xff0f && val == 0)
@@ -101,17 +101,23 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		switch (addr) {
 			case 0xFF01:
 				//debug_log_serial_output(val);
-				//printf("%c", val);
+				printf("%c", val);
 				break;
 			case DIVIDER_REGISTER:
 				io[addr - 0xFF00] = 0;
 				break;
 			case TIMER_CONTROL:
-				io[addr - 0xFF00] = val;
+				io[addr - 0xFF00] = val & 7; // only has the last 3 bits
 				set_freq();
 				break;
 			case LCD_SCANLINE:
 				io[addr - 0xFF00] = 0;
+				break;
+			case LCD_STATUS_REG:
+				io[addr - 0xFF00] = io[addr - 0xFF00] | (val & 0x78);
+				break;
+			case 0xFF46:
+				ppu_dma_transfer(val);
 				break;
 			default:
 				io[addr - 0xFF00] = val;
