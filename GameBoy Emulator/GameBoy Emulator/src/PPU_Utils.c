@@ -15,7 +15,7 @@
 #define TILE_MAP_0 0x9800
 #define TILE_MAP_1 0x9C00
 #define TILE_SET_1 0x8000
-#define TILE_SET_0 0x887F
+#define TILE_SET_0 0x8800
 
 static unsigned char default_palette[4] = { 255, 192, 96, 0 };
 
@@ -23,19 +23,21 @@ unsigned short get_tile_address(unsigned short map_index, unsigned char using_wi
 	unsigned char lcd_control = read_8_bit(LCD_CONTROL);
 	unsigned short tile_set = lcd_control & BG_AND_WINDOW_TILE_DATA_SELECT ? TILE_SET_1 : TILE_SET_0;
 	unsigned short tile_map;
+	char tile_id;
+	unsigned char tile_loc;
 
 	if (lcd_control & WINDOW_DISP_ENABLE)
 		tile_map = lcd_control & WINDOW_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
 	else 
 		tile_map = lcd_control & BG_TILE_MAP_SELECT ? TILE_MAP_1 : TILE_MAP_0;
 
-	char tile_id = read_8_bit(tile_map + map_index);
+	tile_id = read_8_bit(tile_map + map_index);
 
 	// get unsigned value (Check if this works)
-	if (tile_set == TILE_SET_0)
-		tile_id += 128;
 
-	return tile_set + (tile_id * TILE_BYTES);
+	tile_loc = tile_set == TILE_SET_0 ? tile_id + 128 : tile_id;
+
+	return tile_set + (tile_loc * TILE_BYTES);
 }
 
 // Returns tile in tile_out
@@ -53,11 +55,11 @@ unsigned char get_pixel(unsigned short tile_row) {
 	unsigned char palette = read_8_bit(BG_PALETTE);
 
 	if (color == 0x0)
-		return default_palette[palette & PALETTE_00];
+		return default_palette[0];
 	else if (color == 0x8000)
-		return default_palette[palette & PALETTE_01];
-	else if (color == 0x0008)
-		return default_palette[(palette & PALETTE_10) >> 4];
+		return default_palette[1];
+	else if (color == 0x0080)
+		return default_palette[2];
 	else
-		return default_palette[(palette & PALETTE_11) >> 6];
+		return default_palette[3];
 }

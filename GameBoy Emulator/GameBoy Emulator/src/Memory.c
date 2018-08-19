@@ -70,9 +70,6 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 		switch_cart_mode(val);
 
 	} else if (addr < 0xA000) {
-		
-		if(addr > 0x9800)
-			debug_on_map_change();
 
 		if(check_vram_access())
 			vram[addr - 0x8000] = val;
