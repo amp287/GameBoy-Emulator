@@ -10,6 +10,7 @@ GameBoy Emulator/GameBoy Emulator/Debug/
 GameBoy Emulator/Roms/
 
 GameBoy Emulator/GameBoy Emulator/GameBoy Emulator\.vcxproj\.user
+build/
 
 *.psess
 

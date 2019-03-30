@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 	if(argc > 1)
 		rom = argv[1];
 	else
-		rom = "../Roms/Dr._Mario.gb";
+		rom = "../Roms/cpu_instrs.gb";
 
 	if (load_rom(rom) != 0) {
 		printf("Error loading rom\n");
@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	display_init();
 	gpu_init();
 	//background_viewer_init();
-	tile_viewer_init();
+	//tile_viewer_init();
 	// clock cycles per second / FPS
 	// 4194304/60
 	
@@ -43,11 +43,11 @@ int main(int argc, char *argv[]) {
 		cycles = check_interrupts();
 
 		//background_viewer_update();
-		tile_viewer_update();
+		//tile_viewer_update();
 	}
 	gpu_stop();
-	background_viewer_quit();
-	tile_viewer_quit();
+	//background_viewer_quit();
+	//tile_viewer_quit();
 	printf("Press a character and then enter to quit.\n");
 	getchar();
 	return 0;

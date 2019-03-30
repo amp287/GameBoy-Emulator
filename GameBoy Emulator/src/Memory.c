@@ -5,6 +5,7 @@
 #include "Cartridge.h"
 #include "Debug.h"
 #include "PPU.h"
+#include "Sprite.h"
 
 #define ENABLE_EXTERNAL_RAM 0x2000
 #define SWITCH_ROM_BANK 0x4000
@@ -20,26 +21,21 @@ unsigned char read_8_bit(unsigned short addr) {
 		return read_rom_bank_8_bit(addr, 1);
 	}
 	
-	if (addr < 0x8000)
-		return read_rom_bank_8_bit(addr - 0x4000, 0);
-	if (addr < 0xA000)
-		if (check_vram_access)
-			return vram[addr - 0x8000];
-		else
-			return 0xFF;
-	if (addr < 0xC000)
-		return read_ram_bank_8_bit(addr - 0xA000);
-	if (addr < 0xE000)
-		return internal_ram[addr - 0xC000];
-	if (addr < 0xFE00)
-		return internal_ram[addr - 0xE000];
-	if (addr < 0xFF00)
-		if (check_oam_ram_access)
-			return sprite_info[addr - 0xFE00];
-		else
-			return 0xFF;
-	if (addr < 0xFF80)
-		return io[addr - 0xFF00];
+	if (addr < 0x8000) return read_rom_bank_8_bit(addr - 0x4000, 0);
+
+	if (addr < 0xA000) return vram[addr - 0x8000];
+
+	if (addr < 0xC000) return read_ram_bank_8_bit(addr - 0xA000);
+
+	if (addr < 0xE000) return internal_ram[addr - 0xC000];
+
+	if (addr < 0xFE00) return internal_ram[addr - 0xE000];
+
+	if (addr < 0xFF00) {
+		return sprite_info[addr - 0xFE00];
+	}
+		
+	if (addr < 0xFF80) return io[addr - 0xFF00];
 	
 	return zero_pg_ram[addr - 0xFF80];
 }
@@ -88,8 +84,11 @@ void write_8_bit(unsigned short addr, unsigned char val) {
 
 	} else if (addr < 0xFF00) {
 		// sprite info
-		if (check_oam_ram_access)
+		if(addr <= 0xFE9F) {
+			modify_sprite_8(addr, val);
 			sprite_info[addr - 0xFE00] = val;
+		}
+		
 	} else if (addr < 0xFF80) {
 
 		//if (addr == 0xff0f && val == 0)

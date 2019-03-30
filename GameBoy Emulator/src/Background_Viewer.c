@@ -16,7 +16,7 @@
 #define TILE_ROW_BYTES 2
 
 int quit;
-static GLFWwindow* background_window;
+static WINDOW_HANDLE* background_window;
 static const char *window_title = "Map Background Viewer";
 static unsigned char buffer[256][256][3];
 
@@ -58,7 +58,6 @@ void background_viewer_update_screen() {
 	}
 }
 
-
 void *background_viewer_get_thread(){
 	return thread;
 }
@@ -91,7 +90,7 @@ int background_viewer_init() {
 		return ret;
 	}
 
-	background_window = display_create_window(256, 256, window_title, key_callback);
+	background_window = display_create_window(256, 256, window_title, key_callback, 1);
 
 	ret = thread_create(&thread, &background_viewer_run, &quit);//pthread_create(&thread, NULL, &background_viewer_run, &quit);
 

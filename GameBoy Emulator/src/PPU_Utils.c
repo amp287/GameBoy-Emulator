@@ -52,14 +52,20 @@ void get_tile(unsigned short *tile_out, unsigned char map_x, unsigned char map_y
 // Returns color 
 unsigned char get_pixel(unsigned short tile_row) {
 	unsigned short color = tile_row & 0x8080;
-	unsigned char palette = read_8_bit(BG_PALETTE);
+	unsigned char palette_reg = read_8_bit(BG_PALETTE);
+	unsigned char palette[4];
 
-	if (color == 0x0)
-		return default_palette[0];
-	else if (color == 0x8000)
-		return default_palette[1];
-	else if (color == 0x0080)
-		return default_palette[2];
-	else
-		return default_palette[3];
+	for(int i = 0; i < 4; i++) {
+		unsigned char color_number = palette_reg >> (i * 2);
+		palette[i] = default_palette[color_number & 0x3];
+	}
+
+	if (color == 0x0) // 0 
+		return palette[0];//default_palette[0];
+	else if (color == 0x0080) // 1
+		return palette[1];//default_palette[2];
+	else if (color == 0x8000) // 2
+		return palette[2];//default_palette[1];
+	else // 3
+		return palette[3];//default_palette[3];
 }

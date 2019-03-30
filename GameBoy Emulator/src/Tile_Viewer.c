@@ -12,7 +12,7 @@
 #define DELAY 1000
 
 int quit;
-static GLFWwindow* tile_window;
+static WINDOW_HANDLE* tile_window;
 //static const char *window_title = "Vram Tile Viewer";
 static unsigned char buffer[HEIGHT][WIDTH][3];
 int counter;
@@ -111,7 +111,7 @@ int tile_viewer_init() {
 		return ret;
 	}
 
-	tile_window = display_create_window(WIDTH, HEIGHT, WINDOW_TITLE, key_callback);
+	tile_window = display_create_window(WIDTH, HEIGHT, WINDOW_TITLE, key_callback, 1);
 
 	ret = thread_create(&thread, &tile_viewer_run, &quit);
 

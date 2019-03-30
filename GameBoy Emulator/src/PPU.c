@@ -5,6 +5,7 @@
 #include "Display.h"
 #include "Debug.h"
 #include "Interrupts.h"
+#include "Sprite.h"
 
 #define LCD_STATUS_MODE 0x3
 #define LCD_STATUS_COINCIDENCE_FLAG 0x4
@@ -39,7 +40,7 @@ typedef struct LCD_STATUS_REGISTER {
 
 static const char *window_title = "Gameboy";
 static int quit;
-static GLFWwindow* gameboy_window;
+static WINDOW_HANDLE* gameboy_window;
 int has_scanline_rendered;
 int has_updated_display;
 int can_access_oam_ram;
@@ -162,6 +163,11 @@ void update_scanline() {
 			pixel++;
 		}
 		tile_map_id_x = (tile_map_id_x + 1) % MAP_BOUNDS;
+	}
+
+	// Display Sprites
+	if (read_8_bit(LCD_CONTROL) & SPRITE_DISPLAY) {
+		sprite_draw(scanline, screen_buffer[scanline]);
 	}
 }
 
@@ -299,13 +305,14 @@ int gpu_init() {
 	can_access_oam_ram = 1;
 	can_access_vram = 1;
 
-	gameboy_window = display_create_window(160, 144, window_title, key_callback);
+	gameboy_window = display_create_window(160, 144, window_title, key_callback, 3);
 
 	return 0;
 }
 
 int gpu_stop() {
-	glfwDestroyWindow(gameboy_window);
+	display_destroy(gameboy_window);
+	//glfwDestroyWindow(gameboy_window);
 	return 0;
 }
 
